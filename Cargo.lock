@@ -3,5 +3,51 @@
 version = 4
 
 [[package]]
-name = "rust-end"
+name = "app"
+version = "0.1.0"
+dependencies = [
+ "auth",
+ "database",
+ "dotenvy",
+ "middleware",
+ "payments",
+ "utils",
+]
+
+[[package]]
+name = "auth"
+version = "0.1.0"
+dependencies = [
+ "utils",
+]
+
+[[package]]
+name = "database"
+version = "0.1.0"
+dependencies = [
+ "utils",
+]
+
+[[package]]
+name = "dotenvy"
+version = "0.15.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
+
+[[package]]
+name = "middleware"
+version = "0.1.0"
+dependencies = [
+ "utils",
+]
+
+[[package]]
+name = "payments"
+version = "0.1.0"
+dependencies = [
+ "utils",
+]
+
+[[package]]
+name = "utils"
 version = "0.1.0"
