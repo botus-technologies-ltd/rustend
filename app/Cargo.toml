@@ -1,0 +1,17 @@
+[package]
+name    = "app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dotenvy.workspace = true
+actix-web.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+
+auth       = { path = "../auth" }
+payments   = { path = "../payments" }
+database   = { path = "../database" }
+utils      = { path = "../utils" }
+middleware = { path = "../middleware" }
