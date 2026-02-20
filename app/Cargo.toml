@@ -14,3 +14,4 @@ payments   = { path = "../payments" }
 database   = { path = "../database" }
 utils      = { path = "../utils" }
 middleware = { path = "../middleware" }
+actix-cors = "0.7"

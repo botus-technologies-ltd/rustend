@@ -1,8 +1,28 @@
 [package]
 name    = "database"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+
+[features]
+default = ["mongodb"]
+mongodb = ["dep:mongodb"]
+postgres = ["dep:tokio-postgres", "dep:bb8"]
+mysql = ["dep:mysql"]
+sqlite = ["dep:rusqlite", "dep:bb8"]
 
 [dependencies]
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+rand.workspace = true
+utils = { path = "../utils" }
 
-utils      = { path = "../utils" }
+# Database drivers
+mongodb = { workspace = true, optional = true }
+
+# Optional database drivers
+tokio-postgres = { version = "0.7", optional = true }
+mysql = { version = "25", optional = true }
+rusqlite = { version = "0.32", optional = true }
+bb8 = { version = "0.8", optional = true }
