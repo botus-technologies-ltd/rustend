@@ -1,8 +1,38 @@
 [package]
 name    = "middleware"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+# Web framework
+actix-web = { workspace = true }
+actix-rt = { workspace = true }
+actix-service = { workspace = true }
+actix-cors = "0.7"
 
-utils      = { path = "../utils" }
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Utilities
+utils = { path = "../utils" }
+chrono = { workspace = true }
+uuid = { workspace = true }
+once_cell = { workspace = true }
+
+# JWT
+jsonwebtoken = { workspace = true }
+
+# Rate limiting
+# Using in-memory rate limiter (can be replaced with Redis for distributed)
+parking_lot = "0.12"
+
+# CORS
+# Already included in actix-web
+
+[features]
+default = []
+redis = ["tokio/rt-multi-thread"]

@@ -9,6 +9,9 @@ A comprehensive utility crate for Rust backend applications providing logging, e
 - [Encryption](#encryption) - AES-256-GCM encryption
 - [Hash](#hash) - Password hashing and OTP generation
 - [Signature](#signature) - Request signing for secure communication
+- [Email](#email) - Email sending (SMTP, SendGrid, AWS SES, Mailgun)
+- [SMS](#sms) - SMS/Phone notifications (Twilio, AWS SNS, Nexmo)
+- [WebSocket](#websocket) - Real-time communication (notifications, alerts, messaging)
 
 ---
 
@@ -263,6 +266,197 @@ let url = utils::signature::create_signed_url(
   "timestamp": 1699999999,
   "nonce": null
 }
+```
+
+---
+
+## Email
+
+Generic email sending module supporting multiple providers (SMTP, SendGrid, AWS SES, Mailgun).
+
+### Features
+
+- Multiple provider support (SMTP, SendGrid, AWS SES, Mailgun)
+- Fluent Email builder API
+- Pre-built email templates
+- Async trait-based EmailSender for custom implementations
+
+### Usage
+
+```rust
+use utils::email::{EmailService, Email, templates};
+
+// Using EmailService builder
+let service = EmailService::sendgrid("api_key", "from@example.com");
+
+// Build email manually
+let email = Email::new("from@example.com", "to@example.com", "Subject")
+    .html("<h1>Hello!</h1>")
+    .text("Hello!")
+    .cc(vec!["cc@example.com".to_string()])
+    .bcc(vec!["bcc@example.com".to_string()]);
+
+// Send
+let result = service.send(&email).await;
+
+// Use pre-built templates
+let email = templates::welcome_email("user@example.com", "John");
+service.send(&email).await;
+
+let email = templates::password_reset("user@example.com", "reset_token_123");
+service.send(&email).await;
+
+let email = templates::verify_email("user@example.com", "verify_token_456");
+service.send(&email).await;
+
+let email = templates::order_confirmation("user@example.com", "ORD-123", "$99.99");
+service.send(&email).await;
+```
+
+### Provider Setup
+
+```rust
+// SendGrid
+let service = EmailService::sendgrid("SG.api_key", "from@example.com");
+
+// AWS SES
+let service = EmailService::ses("us-east-1", "from@example.com");
+
+// Mailgun
+let service = EmailService::mailgun("api_key", "your-domain.com");
+
+// SMTP
+let config = SmtpConfig::new("smtp.example.com", 587, "user", "pass");
+let service = EmailService::smtp(config);
+```
+
+---
+
+## SMS
+
+Generic SMS/Phone notification module supporting multiple providers (Twilio, AWS SNS, Nexmo).
+
+### Features
+
+- Multiple provider support (Twilio, AWS SNS, Nexmo)
+- SmsMessage builder API
+- Pre-built SMS templates
+
+### Usage
+
+```rust
+use utils::sms::{SmsService, SmsMessage, templates};
+
+// Using SmsService builder
+let service = SmsService::twilio(TwilioConfig::new("SID", "token", "+1234567890"));
+
+// Build SMS manually
+let message = SmsMessage::new("+0987654321", "Hello from the app!");
+
+// Send
+let result = service.send(&message).await;
+
+// Use pre-built templates
+let msg = templates::verification_code("+0987654321", "123456");
+service.send(&msg).await;
+
+let msg = templates::password_reset("+0987654321", "reset_code");
+service.send(&msg).await;
+
+let msg = templates::order_confirmation("+0987654321", "ORD-123");
+service.send(&msg).await;
+```
+
+### Provider Setup
+
+```rust
+// Twilio
+let config = TwilioConfig::new("ACCOUNT_SID", "AUTH_TOKEN", "+1234567890");
+let service = SmsService::twilio(config);
+
+// AWS SNS
+let config = SnsConfig::new("us-east-1", "access_key", "secret_key")
+    .with_sender_id("MyApp");
+let service = SmsService::sns(config);
+
+// Nexmo
+let config = NexmoConfig::new("api_key", "api_secret", "MyApp");
+let service = SmsService::nexmo(config);
+```
+
+---
+
+## WebSocket
+
+Generic WebSocket module for real-time communication (notifications, alerts, messaging).
+
+### Features
+
+- WebSocket message types (Text, JSON, Binary, Ping/Pong)
+- Connection management (WsHub for tracking connections)
+- Channel-based pub/sub messaging
+- Message types: Notification, Alert, ChatMessage, LiveUpdate, Presence
+- WsService for easy sending to users/channels
+
+### Usage
+
+```rust
+use utils::websocket::{
+    WsService, WsServerConfig, WsHub, WsMessage, 
+    Notification, Alert, ChatMessage, LiveUpdate, Presence
+};
+
+// Create WebSocket service
+let ws = WsService::new(WsServerConfig::default());
+
+// Send notification to specific user
+let notification = Notification::new("New Message", "You have a new message!")
+    .with_icon("bell")
+    .with_data(serde_json::json!({"type": "message", "chat_id": "123"}));
+ws.notify_user("user_123", notification);
+
+// Send alert to user
+let alert = Alert::warning("Warning", "Your session is about to expire");
+ws.alert_user("user_123", alert);
+
+// Send chat message
+let message = ChatMessage::new("sender_123", "Hello there!")
+    .to_user("recipient_456")
+    .from_name("John");
+ws.send_chat("recipient_456", message);
+
+// Broadcast live update to channel
+let update = LiveUpdate::created("order", "ORD-123", serde_json::json!({"status": "shipped"}));
+ws.broadcast_update("orders", update);
+
+// Update user presence
+let presence = Presence::online("user_123");
+ws.update_presence("presence", presence);
+```
+
+### Direct Hub Usage
+
+```rust
+use utils::websocket::{WsHub, WsServerConfig, ConnectionInfo};
+
+// Create hub
+let hub = WsHub::new(WsServerConfig::default());
+
+// Register connection
+let conn_info = ConnectionInfo::new("conn_123")
+    .with_user("user_456")
+    .with_ip("192.168.1.1");
+hub.register_connection(conn_info);
+
+// Subscribe to channel
+hub.subscribe("conn_123", "notifications");
+
+// Broadcast to channel
+let msg = WsMessage::json(r#"{"type":"alert","message":"Hello"}"#);
+hub.broadcast_to_channel("notifications", msg).unwrap();
+
+// Send to specific user
+hub.send_to_user("user_456", WsMessage::text("Hello!"));
 ```
 
 ---
