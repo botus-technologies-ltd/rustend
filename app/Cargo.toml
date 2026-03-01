@@ -8,6 +8,7 @@ dotenvy.workspace = true
 actix-web.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+mongodb.workspace = true
 
 auth       = { path = "../auth" }
 payments   = { path = "../payments" }

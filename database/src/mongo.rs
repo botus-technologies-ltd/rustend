@@ -1,9 +1,9 @@
 //! MongoDB database module
 
-use mongodb::{Client, options::ClientOptions};
+use mongodb::sync::{Client, Database};
 
-use crate::init::{Database, DatabaseConfig};
-use crate::utils::{DbResult, DatabaseType};
+use crate::init::{Database as DbTrait, DatabaseConfig};
+use crate::utils::DbResult;
 
 /// MongoDB connection
 pub struct MongoConnection {
@@ -12,18 +12,14 @@ pub struct MongoConnection {
 }
 
 impl MongoConnection {
-    pub async fn new(config: DatabaseConfig) -> DbResult<Box<dyn Database>> {
-        let client_options = ClientOptions::parse(config.connection_string)
-            .await
+    pub fn new(config: DatabaseConfig) -> DbResult<MongoConnection> {
+        let client = Client::with_uri_str(config.connection_string)
             .map_err(|e| crate::utils::DbError::connection_failed(&e.to_string()))?;
-        
-        let client = Client::with_options(client_options)
-            .map_err(|e| crate::utils::DbError::connection_failed(&e.to_string()))?;
-        
-        Ok(Box::new(MongoConnection {
+
+        Ok(MongoConnection {
             client,
             db_name: config.db_name,
-        }))
+        })
     }
 
     /// Get the MongoDB client
@@ -32,16 +28,12 @@ impl MongoConnection {
     }
 
     /// Get database instance
-    pub fn database(&self) -> mongodb::Database {
+    pub fn database(&self) -> Database {
         self.client.database(&self.db_name)
     }
 }
 
-impl Database for MongoConnection {
-    fn db_type(&self) -> DatabaseType {
-        DatabaseType::MongoDB
-    }
-
+impl DbTrait for MongoConnection {
     fn db_name(&self) -> &str {
         &self.db_name
     }

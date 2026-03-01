@@ -1,13 +1,13 @@
 //! Payment Provider Implementations
 
-pub mod visa;
-pub mod paypal;
-pub mod mpesa;
 pub mod airtel;
+pub mod mpesa;
+pub mod paypal;
 pub mod tcash;
+pub mod visa;
 
-pub use visa::{VisaGateway, VisaConfig, VisaEnvironment};
-pub use paypal::{PayPalGateway, PayPalConfig, PayPalEnvironment};
-pub use mpesa::{MpesaGateway, MpesaConfig, MpesaEnvironment};
-pub use airtel::{AirtelGateway, AirtelConfig, AirtelEnvironment};
-pub use tcash::{TCashGateway, TCashConfig, TCashEnvironment};
+pub use airtel::{AirtelConfig, AirtelEnvironment, AirtelGateway};
+pub use mpesa::{MpesaConfig, MpesaEnvironment, MpesaGateway};
+pub use paypal::{PayPalConfig, PayPalEnvironment, PayPalGateway};
+pub use tcash::{TCashConfig, TCashEnvironment, TCashGateway};
+pub use visa::{VisaConfig, VisaEnvironment, VisaGateway};

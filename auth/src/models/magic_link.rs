@@ -1,13 +1,13 @@
 //! Magic Link / Passwordless Login models
 
-use serde::{Deserialize, Serialize};
 use database::utils::DbId;
+use serde::{Deserialize, Serialize};
 
 /// Magic link model - passwordless authentication via email/SMS
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MagicLink {
     pub id: DbId,
-    pub user_id: Option<DbId>,  // None until link is used
+    pub user_id: Option<DbId>, // None until link is used
     pub token_hash: String,
     pub email: Option<String>,
     pub phone: Option<String>,
@@ -37,8 +37,8 @@ impl MagicLink {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum MagicLinkPurpose {
-    Login,      // Passwordless login
-    SignUp,     // Sign up with magic link
+    Login,       // Passwordless login
+    SignUp,      // Sign up with magic link
     EmailVerify, // Verify email
 }
 
@@ -48,13 +48,13 @@ pub struct CreateMagicLink {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub purpose: MagicLinkPurpose,
-    pub expires_in: i64,  // Usually 15-30 minutes
+    pub expires_in: i64, // Usually 15-30 minutes
 }
 
 /// Request magic link for login
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestMagicLink {
-    pub identifier: String,  // email or phone
+    pub identifier: String, // email or phone
     pub purpose: Option<MagicLinkPurpose>,
 }
 

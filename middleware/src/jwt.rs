@@ -1,7 +1,16 @@
-//! JWT Authentication types
+//! JWT Authentication
+//!
+//! Provides JWT token generation, validation, and middleware for request authentication.
 
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use actix_web::{
+    Error, HttpMessage, HttpResponse,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
+};
+use futures_util::future::{LocalBoxFuture, Ready, ready};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
+use std::rc::Rc;
+use std::task::{Context, Poll};
 
 /// JWT configuration
 #[derive(Debug, Clone)]
@@ -13,7 +22,11 @@ pub struct JwtConfig {
 
 impl JwtConfig {
     pub fn new(secret: impl Into<String>) -> Self {
-        Self { secret: secret.into(), algorithm: Algorithm::HS256, access_token_expire_minutes: 60 }
+        Self {
+            secret: secret.into(),
+            algorithm: Algorithm::HS256,
+            access_token_expire_minutes: 60,
+        }
     }
 }
 
@@ -26,34 +39,145 @@ pub struct Claims {
     pub iat: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub enum TokenType { Access, Refresh }
-
-/// JWT Service
-#[derive(Clone)]
-pub struct JwtService {
-    config: JwtConfig,
-    encoding_key: EncodingKey,
-    decoding_key: DecodingKey,
+/// Token information including raw token for session validation
+#[derive(Debug, Clone)]
+pub struct TokenInfo {
+    pub claims: Claims,
+    pub token: String,
 }
 
-impl JwtService {
-    pub fn new(config: JwtConfig) -> Self {
-        let encoding_key = EncodingKey::from_secret(config.secret.as_bytes());
-        let decoding_key = DecodingKey::from_secret(config.secret.as_bytes());
-        Self { config, encoding_key, decoding_key }
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum TokenType {
+    Access,
+    Refresh,
+}
+
+/// JWT Middleware for request authentication
+pub struct JwtMiddleware {
+    secret: String,
+}
+
+impl JwtMiddleware {
+    pub fn new(secret: String) -> Self {
+        Self { secret }
     }
 
-    pub fn generate_access_token(&self, user_id: impl Into<String>, email: Option<String>) -> Result<String, jsonwebtoken::errors::Error> {
-        let now = chrono::Utc::now().timestamp();
-        let claims = Claims { sub: user_id.into(), email, exp: now + (self.config.access_token_expire_minutes * 60), iat: now };
-        encode(&Header::new(self.config.algorithm), &claims, &self.encoding_key)
+    pub fn from_secret(secret: impl Into<String>) -> Self {
+        Self::new(secret.into())
+    }
+}
+
+impl<S, B> Transform<S, ServiceRequest> for JwtMiddleware
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    S::Future: 'static,
+    B: 'static,
+{
+    type Response = ServiceResponse<actix_web::body::EitherBody<B>>;
+    type Error = Error;
+    type Transform = JwtMiddlewareImpl<S>;
+    type InitError = ();
+    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+
+    fn new_transform(&self, service: S) -> Self::Future {
+        ready(Ok(JwtMiddlewareImpl {
+            service: Rc::new(service),
+            secret: self.secret.clone(),
+        }))
+    }
+}
+
+pub struct JwtMiddlewareImpl<S> {
+    service: Rc<S>,
+    secret: String,
+}
+
+impl<S, B> Service<ServiceRequest> for JwtMiddlewareImpl<S>
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    S::Future: 'static,
+    B: 'static,
+{
+    type Response = ServiceResponse<actix_web::body::EitherBody<B>>;
+    type Error = Error;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(cx)
     }
 
-    pub fn validate_token(&self, token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-        let mut validation = Validation::new(self.config.algorithm);
-        validation.validate_exp = true;
-        let token_data: TokenData<Claims> = decode(token, &self.decoding_key, &validation)?;
-        Ok(token_data.claims)
+    fn call(&self, req: ServiceRequest) -> Self::Future {
+        let svc = Rc::clone(&self.service);
+        let secret = self.secret.clone();
+
+        Box::pin(async move {
+            // Extract token from Authorization header
+            let token_opt = req
+                .headers()
+                .get("Authorization")
+                .and_then(|h| h.to_str().ok())
+                .and_then(|h| h.strip_prefix("Bearer "));
+
+            match token_opt {
+                Some(token) => {
+                    let decoding_key = DecodingKey::from_secret(secret.as_bytes());
+                    let validation = Validation::default();
+
+                    match decode::<Claims>(token, &decoding_key, &validation) {
+                        Ok(token_data) => {
+                            // Clone claims before moving into extensions
+                            let claims = token_data.claims;
+
+                            // Store the raw token for later validation against session store
+                            req.extensions_mut().insert(TokenInfo {
+                                claims: claims.clone(),
+                                token: token.to_string(),
+                            });
+                            req.extensions_mut().insert(claims);
+                        }
+                        Err(e) => {
+                            return Ok(req.into_response(
+                                HttpResponse::Unauthorized()
+                                    .json(serde_json::json!({
+                                        "success": false,
+                                        "message": format!("Invalid access token: {}", e)
+                                    }))
+                                    .map_into_right_body(),
+                            ));
+                        }
+                    }
+                }
+                None => {
+                    return Ok(req.into_response(
+                        HttpResponse::Unauthorized()
+                            .json(serde_json::json!({
+                                "success": false,
+                                "message": "Missing Authorization header"
+                            }))
+                            .map_into_right_body(),
+                    ));
+                }
+            }
+
+            // Continue to downstream service
+            let res = svc.call(req).await;
+            Ok(res?.map_into_left_body())
+        })
+    }
+}
+
+/// Extension trait to easily get Claims from request
+pub trait JwtClaims {
+    fn claims(&self) -> Option<Claims>;
+    fn token_info(&self) -> Option<TokenInfo>;
+}
+
+impl JwtClaims for actix_web::HttpRequest {
+    fn claims(&self) -> Option<Claims> {
+        self.extensions().get::<Claims>().cloned()
+    }
+
+    fn token_info(&self) -> Option<TokenInfo> {
+        self.extensions().get::<TokenInfo>().cloned()
     }
 }

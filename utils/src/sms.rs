@@ -65,11 +65,19 @@ pub struct SmsResult {
 
 impl SmsResult {
     pub fn success(message_id: impl Into<String>) -> Self {
-        Self { success: true, message_id: Some(message_id.into()), error: None }
+        Self {
+            success: true,
+            message_id: Some(message_id.into()),
+            error: None,
+        }
     }
 
     pub fn failed(message: impl Into<String>) -> Self {
-        Self { success: false, message_id: None, error: Some(message.into()) }
+        Self {
+            success: false,
+            message_id: None,
+            error: Some(message.into()),
+        }
     }
 }
 
@@ -84,7 +92,12 @@ pub struct SmsConfig {
 
 impl SmsConfig {
     pub fn new(provider: SmsProvider) -> Self {
-        Self { provider, twilio: None, sns: None, nexmo: None }
+        Self {
+            provider,
+            twilio: None,
+            sns: None,
+            nexmo: None,
+        }
     }
 
     pub fn with_twilio(mut self, config: TwilioConfig) -> Self {
@@ -112,8 +125,16 @@ pub struct TwilioConfig {
 }
 
 impl TwilioConfig {
-    pub fn new(account_sid: impl Into<String>, auth_token: impl Into<String>, from_number: impl Into<String>) -> Self {
-        Self { account_sid: account_sid.into(), auth_token: auth_token.into(), from_number: from_number.into() }
+    pub fn new(
+        account_sid: impl Into<String>,
+        auth_token: impl Into<String>,
+        from_number: impl Into<String>,
+    ) -> Self {
+        Self {
+            account_sid: account_sid.into(),
+            auth_token: auth_token.into(),
+            from_number: from_number.into(),
+        }
     }
 }
 
@@ -127,8 +148,17 @@ pub struct SnsConfig {
 }
 
 impl SnsConfig {
-    pub fn new(region: impl Into<String>, access_key: impl Into<String>, secret_key: impl Into<String>) -> Self {
-        Self { region: region.into(), access_key: access_key.into(), secret_key: secret_key.into(), sender_id: None }
+    pub fn new(
+        region: impl Into<String>,
+        access_key: impl Into<String>,
+        secret_key: impl Into<String>,
+    ) -> Self {
+        Self {
+            region: region.into(),
+            access_key: access_key.into(),
+            secret_key: secret_key.into(),
+            sender_id: None,
+        }
     }
 
     pub fn with_sender_id(mut self, sender_id: impl Into<String>) -> Self {
@@ -146,8 +176,16 @@ pub struct NexmoConfig {
 }
 
 impl NexmoConfig {
-    pub fn new(api_key: impl Into<String>, api_secret: impl Into<String>, from: impl Into<String>) -> Self {
-        Self { api_key: api_key.into(), api_secret: api_secret.into(), from: from.into() }
+    pub fn new(
+        api_key: impl Into<String>,
+        api_secret: impl Into<String>,
+        from: impl Into<String>,
+    ) -> Self {
+        Self {
+            api_key: api_key.into(),
+            api_secret: api_secret.into(),
+            from: from.into(),
+        }
     }
 }
 
@@ -157,10 +195,14 @@ pub trait SmsSender: Send + Sync + 'static {
     async fn send(&self, message: &SmsMessage) -> SmsResult;
     async fn send_batch(&self, messages: Vec<SmsMessage>) -> Vec<SmsResult> {
         let mut results = Vec::new();
-        for msg in messages { results.push(self.send(&msg).await); }
+        for msg in messages {
+            results.push(self.send(&msg).await);
+        }
         results
     }
-    async fn verify_number(&self, _phone: &str) -> Result<bool, SmsError> { Ok(true) }
+    async fn verify_number(&self, _phone: &str) -> Result<bool, SmsError> {
+        Ok(true)
+    }
 }
 
 /// SMS errors
@@ -194,7 +236,10 @@ pub mod templates {
     use super::*;
 
     pub fn verification_code(to: &str, code: &str) -> SmsMessage {
-        SmsMessage::new(to, format!("Your verification code is: {}. Valid for 10 minutes.", code))
+        SmsMessage::new(
+            to,
+            format!("Your verification code is: {}. Valid for 10 minutes.", code),
+        )
     }
 
     pub fn welcome(to: &str, name: &str) -> SmsMessage {
@@ -206,7 +251,10 @@ pub mod templates {
     }
 
     pub fn password_reset(to: &str, code: &str) -> SmsMessage {
-        SmsMessage::new(to, format!("Password reset code: {}. Don't share this code.", code))
+        SmsMessage::new(
+            to,
+            format!("Password reset code: {}. Don't share this code.", code),
+        )
     }
 
     pub fn alert(to: &str, message: &str) -> SmsMessage {
@@ -214,65 +262,128 @@ pub mod templates {
     }
 
     pub fn appointment_reminder(to: &str, datetime: &str) -> SmsMessage {
-        SmsMessage::new(to, format!("Reminder: Your appointment is scheduled for {}", datetime))
+        SmsMessage::new(
+            to,
+            format!("Reminder: Your appointment is scheduled for {}", datetime),
+        )
     }
 }
 
 /// Twilio Sender
-pub struct TwilioSender { _config: TwilioConfig, _client: reqwest::Client }
-impl TwilioSender { pub fn new(config: TwilioConfig) -> Self { Self { _config: config, _client: reqwest::Client::new() } } }
+pub struct TwilioSender {
+    _config: TwilioConfig,
+    _client: reqwest::Client,
+}
+impl TwilioSender {
+    pub fn new(config: TwilioConfig) -> Self {
+        Self {
+            _config: config,
+            _client: reqwest::Client::new(),
+        }
+    }
+}
 
 #[async_trait]
 impl SmsSender for TwilioSender {
-    async fn send(&self, _message: &SmsMessage) -> SmsResult { SmsResult::success(format!("twilio_{}", uuid::Uuid::new_v4())) }
+    async fn send(&self, _message: &SmsMessage) -> SmsResult {
+        SmsResult::success(format!("twilio_{}", uuid::Uuid::new_v4()))
+    }
 }
 
 /// AWS SNS Sender
-pub struct SnsSender { _config: SnsConfig, _client: reqwest::Client }
-impl SnsSender { pub fn new(config: SnsConfig) -> Self { Self { _config: config, _client: reqwest::Client::new() } } }
+pub struct SnsSender {
+    _config: SnsConfig,
+    _client: reqwest::Client,
+}
+impl SnsSender {
+    pub fn new(config: SnsConfig) -> Self {
+        Self {
+            _config: config,
+            _client: reqwest::Client::new(),
+        }
+    }
+}
 
 #[async_trait]
 impl SmsSender for SnsSender {
-    async fn send(&self, _message: &SmsMessage) -> SmsResult { SmsResult::success(format!("sns_{}", uuid::Uuid::new_v4())) }
+    async fn send(&self, _message: &SmsMessage) -> SmsResult {
+        SmsResult::success(format!("sns_{}", uuid::Uuid::new_v4()))
+    }
 }
 
 /// Nexmo Sender
-pub struct NexmoSender { _config: NexmoConfig, _client: reqwest::Client }
-impl NexmoSender { pub fn new(config: NexmoConfig) -> Self { Self { _config: config, _client: reqwest::Client::new() } } }
+pub struct NexmoSender {
+    _config: NexmoConfig,
+    _client: reqwest::Client,
+}
+impl NexmoSender {
+    pub fn new(config: NexmoConfig) -> Self {
+        Self {
+            _config: config,
+            _client: reqwest::Client::new(),
+        }
+    }
+}
 
 #[async_trait]
 impl SmsSender for NexmoSender {
-    async fn send(&self, _message: &SmsMessage) -> SmsResult { SmsResult::success(format!("nexmo_{}", uuid::Uuid::new_v4())) }
+    async fn send(&self, _message: &SmsMessage) -> SmsResult {
+        SmsResult::success(format!("nexmo_{}", uuid::Uuid::new_v4()))
+    }
 }
 
 /// SMS Service
-pub struct SmsService { sender: Box<dyn SmsSender + Send + Sync + 'static> }
+pub struct SmsService {
+    sender: Box<dyn SmsSender + Send + Sync + 'static>,
+}
 
 impl SmsService {
     pub fn from_config(config: SmsConfig) -> Result<Self, SmsError> {
         let sender: Box<dyn SmsSender + Send + Sync + 'static> = match config.provider {
             SmsProvider::Twilio => {
-                let twilio = config.twilio.ok_or_else(|| SmsError::Config("Twilio config required".into()))?;
+                let twilio = config
+                    .twilio
+                    .ok_or_else(|| SmsError::Config("Twilio config required".into()))?;
                 Box::new(TwilioSender::new(twilio))
             }
             SmsProvider::AwsSns => {
-                let sns = config.sns.ok_or_else(|| SmsError::Config("SNS config required".into()))?;
+                let sns = config
+                    .sns
+                    .ok_or_else(|| SmsError::Config("SNS config required".into()))?;
                 Box::new(SnsSender::new(sns))
             }
             SmsProvider::Nexmo => {
-                let nexmo = config.nexmo.ok_or_else(|| SmsError::Config("Nexmo config required".into()))?;
+                let nexmo = config
+                    .nexmo
+                    .ok_or_else(|| SmsError::Config("Nexmo config required".into()))?;
                 Box::new(NexmoSender::new(nexmo))
             }
-            SmsProvider::HttpApi => return Err(SmsError::Config("HTTP API not implemented".into())),
+            SmsProvider::HttpApi => {
+                return Err(SmsError::Config("HTTP API not implemented".into()));
+            }
         };
         Ok(Self { sender })
     }
 
-    pub fn twilio(config: TwilioConfig) -> Self { Self { sender: Box::new(TwilioSender::new(config)) } }
-    pub fn sns(config: SnsConfig) -> Self { Self { sender: Box::new(SnsSender::new(config)) } }
-    pub fn nexmo(config: NexmoConfig) -> Self { Self { sender: Box::new(NexmoSender::new(config)) } }
+    pub fn twilio(config: TwilioConfig) -> Self {
+        Self {
+            sender: Box::new(TwilioSender::new(config)),
+        }
+    }
+    pub fn sns(config: SnsConfig) -> Self {
+        Self {
+            sender: Box::new(SnsSender::new(config)),
+        }
+    }
+    pub fn nexmo(config: NexmoConfig) -> Self {
+        Self {
+            sender: Box::new(NexmoSender::new(config)),
+        }
+    }
 
-    pub async fn send(&self, message: &SmsMessage) -> SmsResult { self.sender.send(message).await }
+    pub async fn send(&self, message: &SmsMessage) -> SmsResult {
+        self.sender.send(message).await
+    }
     pub async fn send_to_multiple(&self, to: Vec<String>, body: &str) -> Vec<SmsResult> {
         let mut results = Vec::new();
         for recipient in to {
@@ -281,7 +392,10 @@ impl SmsService {
         results
     }
 
-    pub async fn send_template<F>(&self, to: &str, template_fn: F) -> SmsResult where F: FnOnce(&str) -> SmsMessage {
+    pub async fn send_template<F>(&self, to: &str, template_fn: F) -> SmsResult
+    where
+        F: FnOnce(&str) -> SmsMessage,
+    {
         let message = template_fn(to);
         self.send(&message).await
     }

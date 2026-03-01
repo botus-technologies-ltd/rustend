@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  db:
+    image: mongo:6.0
+    container_name: NYUMBERNI_DB
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: NYUMBER_DB
+      MONGO_INITDB_ROOT_USERNAME: nyuberwatcher
+      MONGO_INITDB_ROOT_PASSWORD: w4tch3r-BT-NYUMBER001
+    
+    volumes:
+      - ../mongo-data:/data/db
+      
+    networks:
+      network:
+        ipv4_address: 172.40.0.6
+
+networks:
+  network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.40.0.0/16

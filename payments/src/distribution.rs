@@ -1,5 +1,5 @@
 //! Payment Distribution/Payout Types
-//! 
+//!
 //! Defines models for paying out to users (marketplaces, gig platforms, etc.)
 
 use chrono::{DateTime, Utc};
@@ -84,18 +84,11 @@ pub enum PayoutDestination {
         bank_name: Option<String>,
     },
     /// Mobile money
-    MobileMoney {
-        phone: String,
-        operator: String,
-    },
+    MobileMoney { phone: String, operator: String },
     /// PayPal
-    PayPal {
-        email: String,
-    },
+    PayPal { email: String },
     /// Card
-    Card {
-        card_id: String,
-    },
+    Card { card_id: String },
 }
 
 /// Batch payout for multiple recipients

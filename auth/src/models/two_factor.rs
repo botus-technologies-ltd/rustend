@@ -1,16 +1,16 @@
 //! Two-Factor Authentication (2FA) models
 
-use serde::{Deserialize, Serialize};
 use database::utils::DbId;
+use serde::{Deserialize, Serialize};
 
 /// Two-factor authentication method
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum TwoFactorMethod {
-    Totp,      // Time-based One-Time Password (Google Authenticator, etc.)
-    Sms,       // SMS verification codes
-    Email,     // Email verification codes
-    Backup,    // Backup codes
+    Totp,   // Time-based One-Time Password (Google Authenticator, etc.)
+    Sms,    // SMS verification codes
+    Email,  // Email verification codes
+    Backup, // Backup codes
 }
 
 /// Two-factor authentication method - stores 2FA configuration for a user
@@ -19,7 +19,7 @@ pub struct TwoFactorConfig {
     pub id: DbId,
     pub user_id: DbId,
     pub method: TwoFactorMethod,
-    pub secret: Option<String>,  // Encrypted TOTP secret
+    pub secret: Option<String>, // Encrypted TOTP secret
     pub phone: Option<String>,  // For SMS method
     pub enabled: bool,
     pub verified_at: Option<i64>,
@@ -63,15 +63,15 @@ pub struct CreateTwoFactorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnableTwoFactorRequest {
     pub method: TwoFactorMethod,
-    pub code: String,  // Verification code
-    pub phone: Option<String>,  // For SMS
+    pub code: String,          // Verification code
+    pub phone: Option<String>, // For SMS
 }
 
 /// Disable 2FA request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisableTwoFactorRequest {
     pub password: String,
-    pub code: Option<String>,  // Optional 2FA code if enabled
+    pub code: Option<String>, // Optional 2FA code if enabled
 }
 
 /// Verify 2FA code request
@@ -103,5 +103,5 @@ pub struct CreateTwoFactorChallenge {
     pub user_id: DbId,
     pub method: TwoFactorMethod,
     pub code_hash: String,
-    pub expires_in: i64,  // Usually 5 minutes
+    pub expires_in: i64, // Usually 5 minutes
 }

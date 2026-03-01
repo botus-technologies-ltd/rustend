@@ -1,5 +1,5 @@
 //! Subscription Types
-//! 
+//!
 //! Defines subscription models for recurring payments.
 
 use chrono::{DateTime, Utc};
@@ -77,9 +77,14 @@ pub struct Subscription {
 }
 
 impl Subscription {
-    pub fn new(plan_id: impl Into<String>, customer_id: impl Into<String>, plan: &SubscriptionPlan) -> Self {
+    pub fn new(
+        plan_id: impl Into<String>,
+        customer_id: impl Into<String>,
+        plan: &SubscriptionPlan,
+    ) -> Self {
         let now = Utc::now();
-        let (trial_start, trial_end) = plan.trial_days
+        let (trial_start, trial_end) = plan
+            .trial_days
             .map(|days| {
                 let end = now + chrono::Duration::days(days as i64);
                 (Some(now), Some(end))
@@ -90,7 +95,11 @@ impl Subscription {
             id: format!("sub_{}", Uuid::new_v4()),
             plan_id: plan_id.into(),
             customer_id: customer_id.into(),
-            status: if plan.trial_days.is_some() { SubscriptionStatus::Trialing } else { SubscriptionStatus::Active },
+            status: if plan.trial_days.is_some() {
+                SubscriptionStatus::Trialing
+            } else {
+                SubscriptionStatus::Active
+            },
             current_period_start: now,
             current_period_end: now + plan.interval.to_duration() * plan.interval_count as i32,
             cancel_at_period_end: false,
@@ -104,7 +113,10 @@ impl Subscription {
     }
 
     pub fn is_active(&self) -> bool {
-        matches!(self.status, SubscriptionStatus::Active | SubscriptionStatus::Trialing)
+        matches!(
+            self.status,
+            SubscriptionStatus::Active | SubscriptionStatus::Trialing
+        )
     }
 }
 

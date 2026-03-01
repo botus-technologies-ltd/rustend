@@ -1,4 +1,8 @@
 target/
 logs/
+mongo-data/
+src/mongo-data/
 
 .env.prod
+.clinerules/
+Cargo.lock

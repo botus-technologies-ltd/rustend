@@ -1,26 +1,51 @@
-use std::sync::Arc;
-use actix_web::{App, HttpServer, web};
 use actix_cors::Cors;
+use actix_web::{App, HttpServer, web};
+use std::sync::Arc;
 
 use app::config::AppConfig;
-use app::state::AppState;
 use app::routes::init_routes;
+use app::state::AppState;
+
+// Utils - Logger
+use middleware::logger::init_with_level;
 
 // Utils - Email
+use database::init::{DatabaseConfig, init_database};
 use utils::email::{EmailService, SmtpConfig};
-
-// Utils - SMS
 use utils::sms::{SmsService, TwilioConfig};
-
-// Utils - WebSocket
-use utils::websocket::{WsService, WsServerConfig};
+use utils::websocket::{WsServerConfig, WsService};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Initialize logger - logs to both file and terminal
+    // In debug mode: shows terminal output for testing
+    // In release mode: logs to file only (terminal disabled)
+    let _guard = if cfg!(debug_assertions) {
+        // Debug/development: log to both file and terminal
+        init_with_level("app", "debug")
+    } else {
+        // Release/production: log to file only (reuse app logger)
+        init_with_level("app", "info")
+    };
+    middleware::tracing::info!("Starting application...");
+
     // Load configs
     let config = AppConfig::from_env();
+    middleware::tracing::info!(
+        "Configuration loaded from {:?}",
+        if cfg!(debug_assertions) {
+            "app/.env.local"
+        } else {
+            "app/.env.prod"
+        }
+    );
+
+    let db_config = DatabaseConfig::new(&config.db_uri, &config.db_name);
+    let db = Arc::new(init_database(db_config).expect("Failed to initialize database"));
+    middleware::tracing::info!("MongoDB connected successfully, database");
 
     // Initialize email service
+    middleware::tracing::info!("Initializing email service: {}", config.email_provider);
     let email = match config.email_provider.as_str() {
         "sendgrid" => Arc::new(EmailService::sendgrid(
             &config.email_api_key,
@@ -39,43 +64,50 @@ async fn main() -> std::io::Result<()> {
 
     // Initialize SMS service
     let sms = match config.sms_provider.as_str() {
-        "twilio" => Arc::new(SmsService::twilio(
-            TwilioConfig::new(
-                &config.sms_account_sid,
-                &config.sms_auth_token,
-                &config.sms_from_number,
-            )
-        )),
-        _ => Arc::new(SmsService::twilio(
-            TwilioConfig::new(
-                &config.sms_account_sid,
-                &config.sms_auth_token,
-                &config.sms_from_number,
-            )
-        )),
+        "twilio" => Arc::new(SmsService::twilio(TwilioConfig::new(
+            &config.sms_account_sid,
+            &config.sms_auth_token,
+            &config.sms_from_number,
+        ))),
+        _ => Arc::new(SmsService::twilio(TwilioConfig::new(
+            &config.sms_account_sid,
+            &config.sms_auth_token,
+            &config.sms_from_number,
+        ))),
     };
 
     // Initialize WebSocket service
-    let ws_config = WsServerConfig::new(&config.ws_url.replace("wss://", "").replace("wss://", ""), 9944);
+    let ws_config = WsServerConfig::new(
+        &config.ws_url.replace("wss://", "").replace("wss://", ""),
+        9944,
+    );
     let ws = Arc::new(WsService::new(ws_config));
 
-    // Create app state
+    // Get MongoDB database instance for stores
+    let mongo_db = db.database();
+
+    // Create app state (general services only)
     let state = AppState::new(
         email,
+        config.email_from.clone(),
+        config.app_name.clone(),
         sms,
         ws,
+        db.clone(),
         config.jwt_secret.clone(),
+        config.jwt_expiry_minutes,
+        config.refresh_token_expiry_days,
+        config.frontend_url.clone(),
     );
 
     // Run server
     HttpServer::new(move || {
+        let state_for_routes = state.clone();
+        let routes_mongo_db = mongo_db.clone();
         App::new()
-            // CORS
             .wrap(Cors::default())
-            // App state
             .app_data(web::Data::new(state.clone()))
-            // Routes
-            .configure(init_routes)
+            .configure(move |cfg| init_routes(cfg, &state_for_routes, &routes_mongo_db))
             // Health check
             .service(health_check)
     })

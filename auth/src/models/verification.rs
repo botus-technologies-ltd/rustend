@@ -1,7 +1,7 @@
 //! Verification models
 
-use serde::{Deserialize, Serialize};
 use database::utils::DbId;
+use serde::{Deserialize, Serialize};
 
 /// Verification code model
 #[derive(Debug, Clone, Serialize, Deserialize)]

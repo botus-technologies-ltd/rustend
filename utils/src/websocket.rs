@@ -150,19 +150,34 @@ pub enum WsEvent {
     /// Client disconnected
     Disconnected { id: String, reason: Option<String> },
     /// Message received
-    Message { connection_id: String, message: WsMessage },
+    Message {
+        connection_id: String,
+        message: WsMessage,
+    },
     /// Client subscribed to channel
-    Subscribed { connection_id: String, channel: String },
+    Subscribed {
+        connection_id: String,
+        channel: String,
+    },
     /// Client unsubscribed from channel
-    Unsubscribed { connection_id: String, channel: String },
+    Unsubscribed {
+        connection_id: String,
+        channel: String,
+    },
     /// Error
-    Error { connection_id: String, error: String },
+    Error {
+        connection_id: String,
+        error: String,
+    },
     /// Broadcast to channel
     Broadcast { channel: String, message: WsMessage },
     /// Send to specific user
     SendToUser { user_id: String, message: WsMessage },
     /// Send to specific connection
-    SendToConnection { connection_id: String, message: WsMessage },
+    SendToConnection {
+        connection_id: String,
+        message: WsMessage,
+    },
 }
 
 /// Connection handler trait
@@ -170,13 +185,13 @@ pub enum WsEvent {
 pub trait ConnectionHandler: Send + Sync {
     /// Handle new connection
     async fn on_connect(&self, _info: ConnectionInfo) {}
-    
+
     /// Handle disconnection
     async fn on_disconnect(&self, _connection_id: &str, _reason: Option<String>) {}
-    
+
     /// Handle incoming message
     async fn on_message(&self, _connection_id: &str, _message: WsMessage) {}
-    
+
     /// Handle error
     async fn on_error(&self, _connection_id: &str, _error: String) {}
 }
@@ -222,12 +237,28 @@ impl Default for WsServerConfig {
 
 impl WsServerConfig {
     pub fn new(host: impl Into<String>, port: u16) -> Self {
-        Self { host: host.into(), port, ..Default::default() }
+        Self {
+            host: host.into(),
+            port,
+            ..Default::default()
+        }
     }
-    pub fn path(mut self, path: impl Into<String>) -> Self { self.path = path.into(); self }
-    pub fn max_connections(mut self, max: usize) -> Self { self.max_connections = max; self }
-    pub fn message_queue_size(mut self, size: usize) -> Self { self.message_queue_size = size; self }
-    pub fn ping_interval(mut self, secs: u64) -> Self { self.ping_interval_secs = secs; self }
+    pub fn path(mut self, path: impl Into<String>) -> Self {
+        self.path = path.into();
+        self
+    }
+    pub fn max_connections(mut self, max: usize) -> Self {
+        self.max_connections = max;
+        self
+    }
+    pub fn message_queue_size(mut self, size: usize) -> Self {
+        self.message_queue_size = size;
+        self
+    }
+    pub fn ping_interval(mut self, secs: u64) -> Self {
+        self.ping_interval_secs = secs;
+        self
+    }
 }
 
 /// Channel subscriber
@@ -246,7 +277,9 @@ impl ChannelSubscriber {
     }
 
     pub fn broadcast(&self, message: WsMessage) -> Result<usize, WsError> {
-        self.sender.send(message).map_err(|_| WsError::ChannelClosed)
+        self.sender
+            .send(message)
+            .map_err(|_| WsError::ChannelClosed)
     }
 }
 
@@ -284,7 +317,8 @@ impl WsHub {
 
     /// Get all connections for a user
     pub fn get_user_connections(&self, user_id: &str) -> Vec<String> {
-        self.connections.read()
+        self.connections
+            .read()
             .values()
             .filter(|c| c.user_id.as_deref() == Some(user_id))
             .map(|c| c.id.clone())
@@ -322,7 +356,11 @@ impl WsHub {
     }
 
     /// Broadcast to channel
-    pub fn broadcast_to_channel(&self, channel: &str, message: WsMessage) -> Result<usize, WsError> {
+    pub fn broadcast_to_channel(
+        &self,
+        channel: &str,
+        message: WsMessage,
+    ) -> Result<usize, WsError> {
         let channels = self.channels.read();
         if let Some(sender) = channels.get(channel) {
             sender.send(message).map_err(|_| WsError::ChannelClosed)
@@ -339,7 +377,11 @@ impl WsHub {
     }
 
     /// Send to specific connection
-    pub fn send_to_connection(&self, connection_id: &str, message: WsMessage) -> Result<(), WsError> {
+    pub fn send_to_connection(
+        &self,
+        connection_id: &str,
+        message: WsMessage,
+    ) -> Result<(), WsError> {
         // In real implementation, would send to the actual WebSocket connection
         let _ = connection_id;
         let _ = message;
@@ -353,7 +395,11 @@ impl WsHub {
 
     /// Get channel subscriber count
     pub fn channel_subscriber_count(&self, channel: &str) -> usize {
-        self.channels.read().get(channel).map(|s| s.receiver_count()).unwrap_or(0)
+        self.channels
+            .read()
+            .get(channel)
+            .map(|s| s.receiver_count())
+            .unwrap_or(0)
     }
 }
 
@@ -414,10 +460,22 @@ impl Notification {
         }
     }
 
-    pub fn with_icon(mut self, icon: impl Into<String>) -> Self { self.icon = Some(icon.into()); self }
-    pub fn with_image(mut self, image: impl Into<String>) -> Self { self.image = Some(image.into()); self }
-    pub fn with_sound(mut self, sound: impl Into<String>) -> Self { self.sound = Some(sound.into()); self }
-    pub fn with_data(mut self, data: serde_json::Value) -> Self { self.data = Some(data); self }
+    pub fn with_icon(mut self, icon: impl Into<String>) -> Self {
+        self.icon = Some(icon.into());
+        self
+    }
+    pub fn with_image(mut self, image: impl Into<String>) -> Self {
+        self.image = Some(image.into());
+        self
+    }
+    pub fn with_sound(mut self, sound: impl Into<String>) -> Self {
+        self.sound = Some(sound.into());
+        self
+    }
+    pub fn with_data(mut self, data: serde_json::Value) -> Self {
+        self.data = Some(data);
+        self
+    }
 
     pub fn to_message(&self) -> WsMessage {
         WsMessage::json(serde_json::to_string(self).unwrap_or_default())
@@ -502,9 +560,18 @@ impl ChatMessage {
         }
     }
 
-    pub fn to_user(mut self, recipient_id: impl Into<String>) -> Self { self.recipient_id = Some(recipient_id.into()); self }
-    pub fn to_channel(mut self, channel_id: impl Into<String>) -> Self { self.channel_id = Some(channel_id.into()); self }
-    pub fn from_name(mut self, name: impl Into<String>) -> Self { self.sender_name = Some(name.into()); self }
+    pub fn to_user(mut self, recipient_id: impl Into<String>) -> Self {
+        self.recipient_id = Some(recipient_id.into());
+        self
+    }
+    pub fn to_channel(mut self, channel_id: impl Into<String>) -> Self {
+        self.channel_id = Some(channel_id.into());
+        self
+    }
+    pub fn from_name(mut self, name: impl Into<String>) -> Self {
+        self.sender_name = Some(name.into());
+        self
+    }
 
     pub fn to_message(&self) -> WsMessage {
         WsMessage::json(serde_json::to_string(self).unwrap_or_default())
@@ -530,19 +597,37 @@ pub enum UpdateAction {
 }
 
 impl LiveUpdate {
-    pub fn created(entity_type: impl Into<String>, entity_id: impl Into<String>, data: serde_json::Value) -> Self {
+    pub fn created(
+        entity_type: impl Into<String>,
+        entity_id: impl Into<String>,
+        data: serde_json::Value,
+    ) -> Self {
         Self::new(entity_type, entity_id, UpdateAction::Create, data)
     }
 
-    pub fn updated(entity_type: impl Into<String>, entity_id: impl Into<String>, data: serde_json::Value) -> Self {
+    pub fn updated(
+        entity_type: impl Into<String>,
+        entity_id: impl Into<String>,
+        data: serde_json::Value,
+    ) -> Self {
         Self::new(entity_type, entity_id, UpdateAction::Update, data)
     }
 
     pub fn deleted(entity_type: impl Into<String>, entity_id: impl Into<String>) -> Self {
-        Self::new(entity_type, entity_id, UpdateAction::Delete, serde_json::json!({}))
+        Self::new(
+            entity_type,
+            entity_id,
+            UpdateAction::Delete,
+            serde_json::json!({}),
+        )
     }
 
-    pub fn new(entity_type: impl Into<String>, entity_id: impl Into<String>, action: UpdateAction, data: serde_json::Value) -> Self {
+    pub fn new(
+        entity_type: impl Into<String>,
+        entity_id: impl Into<String>,
+        action: UpdateAction,
+        data: serde_json::Value,
+    ) -> Self {
         Self {
             entity_type: entity_type.into(),
             entity_id: entity_id.into(),
@@ -576,11 +661,19 @@ pub enum PresenceStatus {
 
 impl Presence {
     pub fn online(user_id: impl Into<String>) -> Self {
-        Self { user_id: user_id.into(), status: PresenceStatus::Online, last_seen: chrono::Utc::now().timestamp() }
+        Self {
+            user_id: user_id.into(),
+            status: PresenceStatus::Online,
+            last_seen: chrono::Utc::now().timestamp(),
+        }
     }
 
     pub fn offline(user_id: impl Into<String>) -> Self {
-        Self { user_id: user_id.into(), status: PresenceStatus::Offline, last_seen: chrono::Utc::now().timestamp() }
+        Self {
+            user_id: user_id.into(),
+            status: PresenceStatus::Offline,
+            last_seen: chrono::Utc::now().timestamp(),
+        }
     }
 
     pub fn to_message(&self) -> WsMessage {
@@ -599,7 +692,9 @@ pub struct WsService {
 
 impl WsService {
     pub fn new(config: WsServerConfig) -> Self {
-        Self { hub: WsHub::new(config) }
+        Self {
+            hub: WsHub::new(config),
+        }
     }
 
     pub fn hub(&self) -> &WsHub {

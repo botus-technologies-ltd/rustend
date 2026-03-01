@@ -7,9 +7,21 @@ edition = "2021"
 serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
-actix-web = { workspace = true }
+jsonwebtoken.workspace = true
+mongodb.workspace = true
+tokio.workspace = true
+actix-web.workspace = true 
+actix-http.workspace = true
+actix-rt.workspace = true
+reqwest.workspace = true
+urlencoding.workspace =  true
+tracing-appender.workspace = true
+uuid = { version = "1.6", features = ["v4", "serde"] }
+rand = "0.8"
+
 utils = { path = "../utils" }
 database = { path = "../database" }
+middleware = { path = "../middleware" }
 
-[features]
-default = []
+[dev-dependencies]
+actix-rt = "2.2"

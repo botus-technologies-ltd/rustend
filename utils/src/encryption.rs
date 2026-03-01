@@ -1,5 +1,5 @@
 //! Encryption module using AES-256-GCM
-//! 
+//!
 //! This module provides secure symmetric encryption for communication between
 //! backend and frontend. Uses AES-256-GCM (Galois/Counter Mode) which provides
 //! both confidentiality and authenticity.
@@ -28,10 +28,10 @@
 //! ```
 
 use aes_gcm::{
-    aead::{Aead, KeyInit, OsRng},
     Aes256Gcm, Nonce,
+    aead::{Aead, KeyInit, OsRng},
 };
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use rand::RngCore;
 
 /// Errors that can occur during encryption/decryption
@@ -47,7 +47,9 @@ impl std::fmt::Display for EncryptionError {
         match self {
             EncryptionError::InvalidKeyLength => write!(f, "Key must be exactly 32 bytes"),
             EncryptionError::InvalidCiphertext => write!(f, "Invalid ciphertext format"),
-            EncryptionError::DecryptionFailed => write!(f, "Decryption failed - data may be tampered"),
+            EncryptionError::DecryptionFailed => {
+                write!(f, "Decryption failed - data may be tampered")
+            }
         }
     }
 }
@@ -55,7 +57,7 @@ impl std::fmt::Display for EncryptionError {
 impl std::error::Error for EncryptionError {}
 
 /// AES-256-GCM Encryptor
-/// 
+///
 /// Provides symmetric encryption using AES-256-GCM.
 /// Each encryption generates a new random nonce.
 pub struct AesGcmEncryption {
@@ -64,25 +66,25 @@ pub struct AesGcmEncryption {
 
 impl AesGcmEncryption {
     /// Create a new encryptor with a 32-byte key
-    /// 
+    ///
     /// # Arguments
     /// * `key` - 32-byte (256-bit) secret key
-    /// 
+    ///
     /// # Returns
     /// Ok(Self) if key is exactly 32 bytes, Err otherwise
     pub fn new(key: &[u8]) -> Result<Self, EncryptionError> {
         if key.len() != 32 {
             return Err(EncryptionError::InvalidKeyLength);
         }
-        
-        let cipher = Aes256Gcm::new_from_slice(key)
-            .expect("Key length is guaranteed to be 32 bytes");
-        
+
+        let cipher =
+            Aes256Gcm::new_from_slice(key).expect("Key length is guaranteed to be 32 bytes");
+
         Ok(Self { cipher })
     }
 
     /// Encrypt plaintext and return base64-encoded ciphertext
-    /// 
+    ///
     /// Output format: [nonce (12 bytes)][ciphertext][auth tag (16 bytes)]
     /// All base64-encoded into a single string
     pub fn encrypt(&self, plaintext: &str) -> Result<String, EncryptionError> {
@@ -92,7 +94,8 @@ impl AesGcmEncryption {
         let nonce = Nonce::from_slice(&nonce_bytes);
 
         // Encrypt
-        let ciphertext = self.cipher
+        let ciphertext = self
+            .cipher
             .encrypt(nonce, plaintext.as_bytes())
             .map_err(|_| EncryptionError::DecryptionFailed)?;
 
@@ -111,7 +114,8 @@ impl AesGcmEncryption {
         OsRng.fill_bytes(&mut nonce_bytes);
         let nonce = Nonce::from_slice(&nonce_bytes);
 
-        let ciphertext = self.cipher
+        let ciphertext = self
+            .cipher
             .encrypt(nonce, plaintext)
             .map_err(|_| EncryptionError::DecryptionFailed)?;
 
@@ -125,7 +129,8 @@ impl AesGcmEncryption {
     /// Decrypt base64-encoded ciphertext
     pub fn decrypt(&self, ciphertext: &str) -> Result<String, EncryptionError> {
         // Base64 decode
-        let combined = BASE64.decode(ciphertext)
+        let combined = BASE64
+            .decode(ciphertext)
             .map_err(|_| EncryptionError::InvalidCiphertext)?;
 
         // Must have at least nonce (12) + tag (16) = 28 bytes
@@ -138,17 +143,18 @@ impl AesGcmEncryption {
         let encrypted_data = &combined[12..];
 
         // Decrypt
-        let plaintext = self.cipher
+        let plaintext = self
+            .cipher
             .decrypt(nonce, encrypted_data)
             .map_err(|_| EncryptionError::DecryptionFailed)?;
 
-        String::from_utf8(plaintext)
-            .map_err(|_| EncryptionError::DecryptionFailed)
+        String::from_utf8(plaintext).map_err(|_| EncryptionError::DecryptionFailed)
     }
 
     /// Decrypt to bytes
     pub fn decrypt_bytes(&self, ciphertext: &str) -> Result<Vec<u8>, EncryptionError> {
-        let combined = BASE64.decode(ciphertext)
+        let combined = BASE64
+            .decode(ciphertext)
             .map_err(|_| EncryptionError::InvalidCiphertext)?;
 
         if combined.len() < 28 {
@@ -165,7 +171,7 @@ impl AesGcmEncryption {
 }
 
 /// Generate a random 32-byte key
-/// 
+///
 /// # Example
 /// ```ignore
 /// let key = utils::encryption::generate_key();

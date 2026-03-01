@@ -1,7 +1,7 @@
 //! Password reset models
 
-use serde::{Deserialize, Serialize};
 use database::utils::DbId;
+use serde::{Deserialize, Serialize};
 
 /// Password reset token model
 #[derive(Debug, Clone, Serialize, Deserialize)]
