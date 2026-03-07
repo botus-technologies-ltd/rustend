@@ -1,7 +1,7 @@
 //! User model
 
-use serde::{Deserialize, Serialize};
 use database::utils::DbId;
+use serde::{Deserialize, Serialize};
 
 /// User model - stored in database
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +24,29 @@ pub struct User {
     pub last_login_at: Option<i64>,
 }
 
+/// User creation input
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateUserInput {
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub username: Option<String>,
+    pub password: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+}
+
+/// User update input
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateUserInput {
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub username: Option<String>,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub is_active: Option<bool>,
+    pub is_verified: Option<bool>,
+}
+
 impl User {
     pub fn is_locked(&self) -> bool {
         if let Some(locked_until) = self.locked_until {
@@ -38,7 +61,7 @@ impl User {
 
     pub fn record_failed_attempt(&mut self, lock_threshold: i32, lock_duration_secs: i64) {
         self.failed_login_attempts += 1;
-        
+
         if self.failed_login_attempts >= lock_threshold {
             self.locked_until = Some(chrono::Utc::now().timestamp() + lock_duration_secs);
         }
@@ -48,27 +71,4 @@ impl User {
         self.failed_login_attempts = 0;
         self.locked_until = None;
     }
-}
-
-/// User creation input
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CreateUserInput {
-    pub email:      Option<String>,
-    pub phone:      Option<String>,
-    pub username:   Option<String>,
-    pub password:   String,
-    pub first_name: Option<String>,
-    pub last_name:  Option<String>,
-}
-
-/// User update input
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpdateUserInput {
-    pub email:       Option<String>,
-    pub phone:       Option<String>,
-    pub username:    Option<String>,
-    pub first_name:  Option<String>,
-    pub last_name:   Option<String>,
-    pub is_active:   Option<bool>,
-    pub is_verified: Option<bool>,
 }

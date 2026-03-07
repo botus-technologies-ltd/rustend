@@ -1,8 +1,8 @@
 //! Authentication errors module
-//! 
+//!
 //! Provides comprehensive error types for authentication operations including
 //! sign up, sign in, password reset, and general auth errors.
-//! 
+//!
 //! These errors are designed to work with utils::response::ApiResponse for
 //! consistent API error responses.
 
@@ -39,7 +39,7 @@ impl AuthError {
             code: self.code.to_string(),
             details: self.details.clone(),
         };
-        
+
         utils::response::ApiResponse::error(&self.message, Some(api_error))
     }
 }
@@ -54,8 +54,7 @@ impl std::error::Error for AuthError {}
 
 impl actix_web::ResponseError for AuthError {
     fn error_response(&self) -> actix_web::HttpResponse {
-        actix_web::HttpResponse::build(self.status_code())
-            .json(self.to_response::<()>())
+        actix_web::HttpResponse::build(self.status_code()).json(self.to_response::<()>())
     }
 
     fn status_code(&self) -> actix_web::http::StatusCode {
@@ -66,19 +65,21 @@ impl actix_web::ResponseError for AuthError {
             AuthErrorCode::Forbidden => actix_web::http::StatusCode::FORBIDDEN,
             AuthErrorCode::NotFound => actix_web::http::StatusCode::NOT_FOUND,
             AuthErrorCode::Conflict => actix_web::http::StatusCode::CONFLICT,
-            AuthErrorCode::EmailAlreadyExists 
-            | AuthErrorCode::PhoneAlreadyExists 
+            AuthErrorCode::EmailAlreadyExists
+            | AuthErrorCode::PhoneAlreadyExists
             | AuthErrorCode::UsernameAlreadyExists => actix_web::http::StatusCode::CONFLICT,
-            AuthErrorCode::InvalidCredentials 
-            | AuthErrorCode::AccountLocked 
-            | AuthErrorCode::AccountNotVerified 
+            AuthErrorCode::InvalidCredentials
+            | AuthErrorCode::AccountLocked
+            | AuthErrorCode::AccountNotVerified
             | AuthErrorCode::TooManyAttempts => actix_web::http::StatusCode::UNAUTHORIZED,
-            AuthErrorCode::InvalidResetToken 
-            | AuthErrorCode::ResetTokenExpired => actix_web::http::StatusCode::BAD_REQUEST,
-            AuthErrorCode::InvalidVerificationCode 
-            | AuthErrorCode::VerificationCodeExpired => actix_web::http::StatusCode::BAD_REQUEST,
-            AuthErrorCode::SessionExpired 
-            | AuthErrorCode::InvalidSession 
+            AuthErrorCode::InvalidResetToken | AuthErrorCode::ResetTokenExpired => {
+                actix_web::http::StatusCode::BAD_REQUEST
+            }
+            AuthErrorCode::InvalidVerificationCode | AuthErrorCode::VerificationCodeExpired => {
+                actix_web::http::StatusCode::BAD_REQUEST
+            }
+            AuthErrorCode::SessionExpired
+            | AuthErrorCode::InvalidSession
             | AuthErrorCode::SessionRevoked => actix_web::http::StatusCode::UNAUTHORIZED,
             _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
         }
@@ -96,7 +97,7 @@ pub enum AuthErrorCode {
     Forbidden,
     NotFound,
     Conflict,
-    
+
     // Sign up errors
     EmailAlreadyExists,
     PhoneAlreadyExists,
@@ -105,24 +106,24 @@ pub enum AuthErrorCode {
     InvalidPhoneNumber,
     InvalidUsername,
     WeakPassword,
-    
+
     // Sign in errors
     InvalidCredentials,
     AccountLocked,
     AccountNotVerified,
     TooManyAttempts,
-    
+
     // Password reset errors
     InvalidResetToken,
     ResetTokenExpired,
     InvalidPassword,
     PasswordMismatch,
-    
+
     // Verification errors
     InvalidVerificationCode,
     VerificationCodeExpired,
     AlreadyVerified,
-    
+
     // Session errors
     SessionExpired,
     InvalidSession,
@@ -170,23 +171,23 @@ impl AuthError {
     pub fn internal_error(msg: &str) -> Self {
         Self::new(AuthErrorCode::InternalError, msg)
     }
-    
+
     pub fn unauthorized(msg: &str) -> Self {
         Self::new(AuthErrorCode::Unauthorized, msg)
     }
-    
+
     pub fn forbidden(msg: &str) -> Self {
         Self::new(AuthErrorCode::Forbidden, msg)
     }
-    
+
     pub fn not_found(msg: &str) -> Self {
         Self::new(AuthErrorCode::NotFound, msg)
     }
-    
+
     pub fn conflict(msg: &str) -> Self {
         Self::new(AuthErrorCode::Conflict, msg)
     }
-    
+
     pub fn invalid_request(msg: &str) -> Self {
         Self::new(AuthErrorCode::InvalidRequest, msg)
     }
@@ -194,72 +195,76 @@ impl AuthError {
     // Sign up errors
     pub fn email_already_exists(email: &str) -> Self {
         Self::new(
-            AuthErrorCode::EmailAlreadyExists, 
-            format!("Email '{}' is already registered", email)
+            AuthErrorCode::EmailAlreadyExists,
+            format!("Email '{}' is already registered", email),
         )
     }
-    
+
     pub fn phone_already_exists(phone: &str) -> Self {
         Self::new(
             AuthErrorCode::PhoneAlreadyExists,
-            format!("Phone number '{}' is already registered", phone)
+            format!("Phone number '{}' is already registered", phone),
         )
     }
-    
+
     pub fn username_already_exists(username: &str) -> Self {
         Self::new(
             AuthErrorCode::UsernameAlreadyExists,
-            format!("Username '{}' is already taken", username)
+            format!("Username '{}' is already taken", username),
         )
     }
-    
+
     pub fn invalid_email(email: &str) -> Self {
         Self::new(
             AuthErrorCode::InvalidEmail,
-            format!("Invalid email format: {}", email)
+            format!("Invalid email format: {}", email),
         )
     }
-    
+
     pub fn invalid_username(username: &str) -> Self {
         Self::new(
             AuthErrorCode::InvalidUsername,
-            format!("Invalid username: {}", username)
+            format!("Invalid username: {}", username),
         )
     }
-    
-    pub fn weak_password() -> Self {
-        Self::new(
-            AuthErrorCode::WeakPassword,
-            "Password must be at least 8 characters with uppercase, lowercase, and numbers"
-        )
+
+    pub fn weak_password(error: &str) -> Self {
+        Self::new(AuthErrorCode::WeakPassword, error)
     }
 
     // Sign in errors
     pub fn invalid_credentials() -> Self {
         Self::new(
             AuthErrorCode::InvalidCredentials,
-            "Invalid email/username or password"
+            "Invalid email/username or password",
         )
     }
-    
+
+    pub fn account_disabled() -> Self {
+        Self::new(
+            AuthErrorCode::Forbidden,
+            "Your account has been disabled. Please contact support.",
+        )
+    }
+
     pub fn account_locked() -> Self {
         Self::new(
             AuthErrorCode::AccountLocked,
-            "Your account has been locked. Please try again later or contact support."
+            "Your account has been locked. Please try again later or contact support.",
         )
     }
-    
+
     pub fn account_not_verified() -> Self {
         Self::new(
             AuthErrorCode::AccountNotVerified,
-            "Please verify your email address to continue"
+            "Please verify your email address to continue",
         )
     }
-    
+
     pub fn too_many_attempts() -> Self {
         Self::new(
             AuthErrorCode::TooManyAttempts,
-            "Too many login attempts. Please try again later."
+            "Too many login attempts. Please try again later.",
         )
     }
 
@@ -267,21 +272,21 @@ impl AuthError {
     pub fn invalid_reset_token() -> Self {
         Self::new(
             AuthErrorCode::InvalidResetToken,
-            "Invalid password reset token"
+            "Invalid password reset token",
         )
     }
-    
+
     pub fn reset_token_expired() -> Self {
         Self::new(
             AuthErrorCode::ResetTokenExpired,
-            "Password reset token has expired. Please request a new one."
+            "Password reset token has expired. Please request a new one.",
         )
     }
-    
+
     pub fn password_mismatch() -> Self {
         Self::new(
             AuthErrorCode::PasswordMismatch,
-            "Password and confirmation password do not match"
+            "Password and confirmation password do not match",
         )
     }
 
@@ -289,21 +294,21 @@ impl AuthError {
     pub fn invalid_verification_code() -> Self {
         Self::new(
             AuthErrorCode::InvalidVerificationCode,
-            "Invalid verification code"
+            "Invalid verification code",
         )
     }
-    
+
     pub fn verification_code_expired() -> Self {
         Self::new(
             AuthErrorCode::VerificationCodeExpired,
-            "Verification code has expired. Please request a new one."
+            "Verification code has expired. Please request a new one.",
         )
     }
-    
+
     pub fn already_verified() -> Self {
         Self::new(
             AuthErrorCode::AlreadyVerified,
-            "Account is already verified"
+            "Account is already verified",
         )
     }
 
@@ -311,15 +316,12 @@ impl AuthError {
     pub fn session_expired() -> Self {
         Self::new(
             AuthErrorCode::SessionExpired,
-            "Your session has expired. Please log in again."
+            "Your session has expired. Please log in again.",
         )
     }
-    
+
     pub fn invalid_session() -> Self {
-        Self::new(
-            AuthErrorCode::InvalidSession,
-            "Invalid session"
-        )
+        Self::new(AuthErrorCode::InvalidSession, "Invalid session")
     }
 }
 

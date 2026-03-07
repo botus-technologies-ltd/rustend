@@ -1,5 +1,5 @@
 //! Hashing module for passwords, OTPs, and other sensitive data
-//! 
+//!
 //! Provides secure hashing using Argon2 (recommended) and bcrypt.
 //! Use this for storing passwords, OTPs, API keys, and other sensitive data.
 //!
@@ -18,17 +18,17 @@
 //! // Hash a password
 //! let password = "secure_password_123";
 //! let hash = Hash::argon2(password).unwrap();
-//! 
+//!
 //! // Verify password
 //! assert!(hash.verify(password).unwrap());
 //! assert!(!hash.verify("wrong_password").unwrap());
 //! ```
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
-use bcrypt::{hash, verify, DEFAULT_COST};
+use bcrypt::{DEFAULT_COST, hash, verify};
 use serde::{Deserialize, Serialize};
 
 /// Errors that can occur during hashing/verification
@@ -61,16 +61,16 @@ pub struct Hash {
 
 impl Hash {
     /// Create Argon2 hash from plaintext
-    /// 
+    ///
     /// Uses Argon2id variant with secure defaults:
     /// - Memory: 64MB
     /// - Iterations: 3
     /// - Parallelism: 4
     pub fn argon2(password: &str) -> Result<Self, HashError> {
         let salt = SaltString::generate(&mut OsRng);
-        
+
         let argon2 = Argon2::default();
-        
+
         let password_hash = argon2
             .hash_password(password.as_bytes(), &salt)
             .map_err(|e| HashError::HashingFailed(e.to_string()))?
@@ -83,22 +83,27 @@ impl Hash {
     }
 
     /// Create Argon2 hash with custom parameters
-    /// 
+    ///
     /// # Arguments
     /// * `password` - Plaintext to hash
     /// * `memory` - Memory in KB (default 65536 = 64MB)
     /// * `iterations` - Number of iterations (default 3)
     /// * `parallelism` - Parallel threads (default 4)
-    pub fn argon2_custom(password: &str, memory: u32, iterations: u32, parallelism: u32) -> Result<Self, HashError> {
+    pub fn argon2_custom(
+        password: &str,
+        memory: u32,
+        iterations: u32,
+        parallelism: u32,
+    ) -> Result<Self, HashError> {
         let salt = SaltString::generate(&mut OsRng);
-        
+
         let argon2 = Argon2::new(
             argon2::Algorithm::Argon2id,
             argon2::Version::V0x13,
             argon2::Params::new(memory, iterations, parallelism, None)
                 .map_err(|e| HashError::HashingFailed(e.to_string()))?,
         );
-        
+
         let password_hash = argon2
             .hash_password(password.as_bytes(), &salt)
             .map_err(|e| HashError::HashingFailed(e.to_string()))?
@@ -111,12 +116,12 @@ impl Hash {
     }
 
     /// Create bcrypt hash
-    /// 
+    ///
     /// Uses default cost (12). Higher = more secure but slower.
     /// Cost range: 4-31
     pub fn bcrypt(password: &str) -> Result<Self, HashError> {
-        let hashed = hash(password, DEFAULT_COST)
-            .map_err(|e| HashError::HashingFailed(e.to_string()))?;
+        let hashed =
+            hash(password, DEFAULT_COST).map_err(|e| HashError::HashingFailed(e.to_string()))?;
 
         Ok(Self {
             algorithm: "bcrypt".to_string(),
@@ -126,8 +131,7 @@ impl Hash {
 
     /// Create bcrypt hash with custom cost
     pub fn bcrypt_cost(password: &str, cost: u32) -> Result<Self, HashError> {
-        let hashed = hash(password, cost)
-            .map_err(|e| HashError::HashingFailed(e.to_string()))?;
+        let hashed = hash(password, cost).map_err(|e| HashError::HashingFailed(e.to_string()))?;
 
         Ok(Self {
             algorithm: "bcrypt".to_string(),
@@ -147,8 +151,7 @@ impl Hash {
 
     /// Verify using Argon2
     fn verify_argon2(&self, plaintext: &str) -> Result<bool, HashError> {
-        let parsed_hash = PasswordHash::new(&self.hash)
-            .map_err(|_| HashError::InvalidHash)?;
+        let parsed_hash = PasswordHash::new(&self.hash).map_err(|_| HashError::InvalidHash)?;
 
         Ok(Argon2::default()
             .verify_password(plaintext.as_bytes(), &parsed_hash)
@@ -219,7 +222,7 @@ impl Hasher for String {
 pub fn generate_random(length: usize) -> String {
     use rand::Rng;
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    
+
     let mut rng = rand::thread_rng();
     (0..length)
         .map(|_| {
@@ -247,6 +250,41 @@ pub fn generate_hex(length: usize) -> String {
         .collect()
 }
 
+/// Hash a string using SHA256
+///
+/// Useful for hashing access tokens, refresh tokens, and other non-sensitive data.
+/// SHA256 produces a 64-character hex string.
+
+pub fn hash_sha256(data: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(data.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+/// Hash bytes using SHA256
+pub fn hash_sha256_bytes(data: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    format!("{:x}", hasher.finalize())
+}
+
+/// Verify a SHA256 hash
+///
+/// # Arguments
+/// * `data` - The original plaintext to verify
+/// * `hash` - The hash to verify against
+
+pub fn verify_sha256(data: &str, hash: &str) -> bool {
+    hash_sha256(data) == hash
+}
+
+/// Verify SHA256 hash from bytes
+pub fn verify_sha256_bytes(data: &[u8], hash: &str) -> bool {
+    hash_sha256_bytes(data) == hash
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,7 +293,7 @@ mod tests {
     fn test_argon2_hash_and_verify() {
         let password = "secure_password_123";
         let hash = Hash::argon2(password).unwrap();
-        
+
         assert!(hash.verify(password).unwrap());
         assert!(!hash.verify("wrong_password").unwrap());
     }
@@ -264,7 +302,7 @@ mod tests {
     fn test_bcrypt_hash_and_verify() {
         let password = "secure_password_123";
         let hash = Hash::bcrypt(password).unwrap();
-        
+
         assert!(hash.verify(password).unwrap());
         assert!(!hash.verify("wrong_password").unwrap());
     }
@@ -273,7 +311,7 @@ mod tests {
     fn test_from_string() {
         let hash = Hash::argon2("password").unwrap();
         let hash_str = hash.to_string();
-        
+
         let parsed = Hash::from_string(&hash_str).unwrap();
         assert!(parsed.verify("password").unwrap());
     }
@@ -295,5 +333,36 @@ mod tests {
     fn test_generate_random() {
         let s = generate_random(16);
         assert_eq!(s.len(), 16);
+    }
+
+    #[test]
+    fn test_sha256_hash() {
+        let data = "test_string";
+        let hash = hash_sha256(data);
+
+        // SHA256 produces 64 character hex string
+        assert_eq!(hash.len(), 64);
+        assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+
+        // Should be consistent
+        assert_eq!(hash_sha256(data), hash);
+    }
+
+    #[test]
+    fn test_sha256_verify() {
+        let data = "token_data";
+        let hash = hash_sha256(data);
+
+        assert!(verify_sha256(data, &hash));
+        assert!(!verify_sha256("wrong_data", &hash));
+    }
+
+    #[test]
+    fn test_sha256_bytes() {
+        let data = b"test_bytes";
+        let hash = hash_sha256_bytes(data);
+
+        assert_eq!(hash.len(), 64);
+        assert!(verify_sha256_bytes(data, &hash));
     }
 }

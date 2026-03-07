@@ -1,7 +1,7 @@
 //! OAuth/Social login models
 
-use serde::{Deserialize, Serialize};
 use database::utils::DbId;
+use serde::{Deserialize, Serialize};
 
 /// OAuth provider enum
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -22,9 +22,9 @@ pub struct OAuthAccount {
     pub id: DbId,
     pub user_id: DbId,
     pub provider: OAuthProvider,
-    pub provider_user_id: String,  // ID from the OAuth provider
+    pub provider_user_id: String,      // ID from the OAuth provider
     pub access_token: Option<String>,  // Encrypted
-    pub refresh_token: Option<String>,  // Encrypted
+    pub refresh_token: Option<String>, // Encrypted
     pub expires_at: Option<i64>,
     pub scope: Option<String>,
     pub created_at: i64,

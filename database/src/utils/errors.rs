@@ -1,5 +1,5 @@
 //! Database errors module
-//! 
+//!
 //! Provides error types for database operations.
 
 use serde::{Deserialize, Serialize};
@@ -43,22 +43,22 @@ pub enum DbErrorCode {
     ConnectionFailed,
     ConnectionTimeout,
     PoolExhausted,
-    
+
     // Query errors
     QueryFailed,
     NotFound,
     DuplicateKey,
     ConstraintViolation,
     InvalidQuery,
-    
+
     // Transaction errors
     TransactionFailed,
     RollbackFailed,
-    
+
     // Migration errors
     MigrationFailed,
     MigrationNotFound,
-    
+
     // General errors
     InternalError,
     InvalidConfiguration,

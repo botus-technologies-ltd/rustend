@@ -1,5 +1,5 @@
 //! Request signing module for secure backend-frontend communication
-//! 
+//!
 //! Provides HMAC-SHA256 request signing to verify message integrity and authenticity.
 //! When a request is signed, any tampering with the message will cause signature verification to fail.
 //!
@@ -25,9 +25,9 @@
 //! // Backend: Verify the signature
 //! let is_valid = Signature::verify(message, &signature, &key, 5).unwrap();
 //! ```
-//! 
+//!
 
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
@@ -85,18 +85,23 @@ impl Signature {
     }
 
     /// Verify the signature
-    pub fn verify(&self, message: &str, key: &[u8], max_age_minutes: i64) -> Result<bool, SignatureError> {
+    pub fn verify(
+        &self,
+        message: &str,
+        key: &[u8],
+        max_age_minutes: i64,
+    ) -> Result<bool, SignatureError> {
         // Check timestamp
         let now = chrono::Utc::now().timestamp();
         let age = now - self.timestamp;
-        
+
         if age.abs() > max_age_minutes * 60 {
             return Err(SignatureError::SignatureExpired);
         }
 
         // Verify signature
         let expected = Signer::sign_raw(message, self.timestamp, key)?;
-        
+
         // Constant-time comparison to prevent timing attacks
         Ok(self.signature == expected)
     }
@@ -134,17 +139,25 @@ impl Signer {
     pub fn sign(message: &str, key: &[u8]) -> Result<Signature, SignatureError> {
         let timestamp = chrono::Utc::now().timestamp();
         let signature = Self::sign_raw(message, timestamp, key)?;
-        
+
         Ok(Signature::new(signature, timestamp))
     }
 
     /// Sign with a nonce for extra replay protection
-    pub fn sign_with_nonce(message: &str, key: &[u8], nonce: &str) -> Result<Signature, SignatureError> {
+    pub fn sign_with_nonce(
+        message: &str,
+        key: &[u8],
+        nonce: &str,
+    ) -> Result<Signature, SignatureError> {
         let timestamp = chrono::Utc::now().timestamp();
         let message_with_nonce = format!("{}:{}:{}", message, timestamp, nonce);
         let signature = Self::sign_raw(&message_with_nonce, timestamp, key)?;
-        
-        Ok(Signature::with_nonce(signature, timestamp, nonce.to_string()))
+
+        Ok(Signature::with_nonce(
+            signature,
+            timestamp,
+            nonce.to_string(),
+        ))
     }
 
     /// Internal signing function
@@ -155,36 +168,46 @@ impl Signer {
 
         // Create message: timestamp.message
         let data = format!("{}.{}", timestamp, message);
-        
+
         // Create HMAC
-        let mut mac = HmacSha256::new_from_slice(key)
-            .map_err(|_| SignatureError::InvalidKey)?;
-        
+        let mut mac = HmacSha256::new_from_slice(key).map_err(|_| SignatureError::InvalidKey)?;
+
         mac.update(data.as_bytes());
         let result = mac.finalize().into_bytes();
-        
+
         // Base64 encode
         Ok(BASE64.encode(result))
     }
 
     /// Verify a signature
-    pub fn verify(message: &str, signature: &Signature, key: &[u8], max_age_minutes: i64) -> Result<bool, SignatureError> {
+    pub fn verify(
+        message: &str,
+        signature: &Signature,
+        key: &[u8],
+        max_age_minutes: i64,
+    ) -> Result<bool, SignatureError> {
         signature.verify(message, key, max_age_minutes)
     }
 
     /// Quick verify without Signature struct
-    pub fn quick_verify(message: &str, signature: &str, timestamp: i64, key: &[u8], max_age_minutes: i64) -> Result<bool, SignatureError> {
+    pub fn quick_verify(
+        message: &str,
+        signature: &str,
+        timestamp: i64,
+        key: &[u8],
+        max_age_minutes: i64,
+    ) -> Result<bool, SignatureError> {
         // Check timestamp
         let now = chrono::Utc::now().timestamp();
         let age = now - timestamp;
-        
+
         if age.abs() > max_age_minutes * 60 {
             return Err(SignatureError::SignatureExpired);
         }
 
         // Compute expected
         let expected = Self::sign_raw(message, timestamp, key)?;
-        
+
         // Constant-time comparison
         Ok(signature == expected)
     }
@@ -230,27 +253,24 @@ impl SignedRequest {
     pub fn sign(mut self, key: &[u8]) -> Result<Self, SignatureError> {
         // Build canonical message
         let message = self.build_message()?;
-        
+
         self.signature = Signer::sign_raw(&message, self.timestamp, key)?;
-        
+
         Ok(self)
     }
 
     /// Build canonical message string
     fn build_message(&self) -> Result<String, SignatureError> {
-        let mut parts = vec![
-            self.method.clone(),
-            self.path.clone(),
-        ];
-        
+        let mut parts = vec![self.method.clone(), self.path.clone()];
+
         if let Some(ref query) = self.query {
             parts.push(format!("?{}", query));
         }
-        
+
         if let Some(ref body) = self.body {
             parts.push(body.clone());
         }
-        
+
         Ok(parts.join("|"))
     }
 
@@ -259,7 +279,7 @@ impl SignedRequest {
         // Check timestamp
         let now = chrono::Utc::now().timestamp();
         let age = now - self.timestamp;
-        
+
         if age.abs() > max_age_minutes * 60 {
             return Err(SignatureError::SignatureExpired);
         }
@@ -267,7 +287,7 @@ impl SignedRequest {
         // Build message and verify
         let message = self.build_message()?;
         let expected = Signer::sign_raw(&message, self.timestamp, key)?;
-        
+
         Ok(self.signature == expected)
     }
 
@@ -283,44 +303,56 @@ impl SignedRequest {
 }
 
 /// Utility to create URL-safe signed query strings
-pub fn create_signed_url(path: &str, params: &[(&str, &str)], key: &[u8]) -> Result<String, SignatureError> {
+pub fn create_signed_url(
+    path: &str,
+    params: &[(&str, &str)],
+    key: &[u8],
+) -> Result<String, SignatureError> {
     let query_string = params
         .iter()
         .map(|(k, v)| format!("{}={}", urlencoding::encode(k), urlencoding::encode(v)))
         .collect::<Vec<_>>()
         .join("&");
-    
+
     let full_message = format!("{}?{}", path, query_string);
-    
+
     let signature = Signer::sign(&full_message, key)?;
-    
-    Ok(format!("{}&signature={}&timestamp={}", 
-        query_string, 
+
+    Ok(format!(
+        "{}&signature={}&timestamp={}",
+        query_string,
         urlencoding::encode(&signature.signature),
         signature.timestamp
     ))
 }
 
 /// Verify a signed URL query string
-pub fn verify_signed_url(path: &str, query_with_signature: &str, key: &[u8], max_age_minutes: i64) -> Result<bool, SignatureError> {
+pub fn verify_signed_url(
+    path: &str,
+    query_with_signature: &str,
+    key: &[u8],
+    max_age_minutes: i64,
+) -> Result<bool, SignatureError> {
     // Parse query and signature
     let parts: Vec<&str> = query_with_signature.split("&signature=").collect();
     if parts.len() != 2 {
         return Err(SignatureError::InvalidSignature);
     }
-    
+
     let query = parts[0];
     let sig_parts: Vec<&str> = parts[1].split("&timestamp=").collect();
     if sig_parts.len() != 2 {
         return Err(SignatureError::InvalidSignature);
     }
-    
+
     let signature = sig_parts[0];
-    let timestamp: i64 = sig_parts[1].parse().map_err(|_| SignatureError::InvalidSignature)?;
-    
+    let timestamp: i64 = sig_parts[1]
+        .parse()
+        .map_err(|_| SignatureError::InvalidSignature)?;
+
     // Build full message
     let full_message = format!("{}?{}", path, query);
-    
+
     // Verify
     Signer::quick_verify(&full_message, signature, timestamp, key, max_age_minutes)
 }
@@ -333,15 +365,15 @@ mod tests {
     fn test_sign_and_verify() {
         let key = Signer::generate_key();
         let message = "amount=100&to=account123";
-        
+
         let signature = Signer::sign(message, &key).unwrap();
-        
+
         // Should verify successfully
         assert!(signature.verify(message, &key, 5).unwrap());
-        
+
         // Wrong message should fail
         assert!(!signature.verify("tampered message", &key, 5).unwrap());
-        
+
         // Wrong key should fail
         let wrong_key = Signer::generate_key();
         assert!(!signature.verify(message, &wrong_key, 5).unwrap());
@@ -351,10 +383,10 @@ mod tests {
     fn test_signature_expired() {
         let key = Signer::generate_key();
         let message = "test";
-        
+
         let mut signature = Signer::sign(message, &key).unwrap();
         signature.timestamp = chrono::Utc::now().timestamp() - 600; // 10 minutes ago
-        
+
         // Should fail - expired
         assert!(matches!(
             signature.verify(message, &key, 5).unwrap_err(),
@@ -365,13 +397,13 @@ mod tests {
     #[test]
     fn test_signed_request() {
         let key = Signer::generate_key();
-        
+
         let request = SignedRequest::new("POST", "/api/transfer")
             .with_query("lang=en")
             .with_body(r#"{"amount":100}"#)
             .sign(&key)
             .unwrap();
-        
+
         assert!(request.verify(&key, 5).unwrap());
     }
 }

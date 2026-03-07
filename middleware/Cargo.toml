@@ -26,12 +26,18 @@ once_cell = { workspace = true }
 # JWT
 jsonwebtoken = { workspace = true }
 
+# Async futures
+futures-util = "0.3"
+
 # Rate limiting
 # Using in-memory rate limiter (can be replaced with Redis for distributed)
 parking_lot = "0.12"
 
 # CORS
 # Already included in actix-web
+tracing-appender.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [features]
 default = []

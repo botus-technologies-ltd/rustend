@@ -1,7 +1,7 @@
 //! Session model
 
-use serde::{Deserialize, Serialize};
 use database::utils::DbId;
+use serde::{Deserialize, Serialize};
 
 /// Session model
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +43,13 @@ pub struct CreateSession {
     pub ip_address: Option<String>,
     pub user_agent: Option<String>,
     pub expires_in: i64,
+}
+
+pub struct UpdateSession {
+    pub access_token_hash: String,
+    pub refresh_token_hash: String,
+    pub expires_at: i64,
+    pub is_revoked: bool,
 }
 
 /// Refresh token model

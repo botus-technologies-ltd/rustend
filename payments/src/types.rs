@@ -1,5 +1,5 @@
 //! Core Payment Types
-//! 
+//!
 //! Defines the unified payment types used across all payment providers.
 
 use chrono::{DateTime, Utc};
@@ -79,7 +79,10 @@ pub struct Amount {
 
 impl Amount {
     pub fn new(value: i64, currency: impl Into<String>) -> Self {
-        Self { value, currency: currency.into() }
+        Self {
+            value,
+            currency: currency.into(),
+        }
     }
 
     pub fn usd(cents: i64) -> Self {
@@ -102,7 +105,12 @@ pub struct Customer {
 
 impl Customer {
     pub fn new() -> Self {
-        Self { id: None, email: None, phone: None, name: None }
+        Self {
+            id: None,
+            email: None,
+            phone: None,
+            name: None,
+        }
     }
 
     pub fn with_email(mut self, email: impl Into<String>) -> Self {

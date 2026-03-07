@@ -13,9 +13,20 @@ impl Default for CorsConfig {
     fn default() -> Self {
         Self {
             allowed_origins: vec![],
-            allowed_methods: vec![Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::PATCH, Method::OPTIONS],
+            allowed_methods: vec![
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::DELETE,
+                Method::PATCH,
+                Method::OPTIONS,
+            ],
         }
     }
 }
 
-impl CorsConfig { pub fn new() -> Self { Self::default() } }
+impl CorsConfig {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}

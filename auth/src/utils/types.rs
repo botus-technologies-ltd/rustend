@@ -1,8 +1,8 @@
 //! Authentication types module
-//! 
+//!
 //! Provides API types for authentication operations including
 //! user data, requests, responses, and tokens.
-//! 
+//!
 //! These are the types used in HTTP requests/responses (API layer).
 //! For database models, see `crate::models`.
 
@@ -29,9 +29,7 @@ pub struct User {
 impl User {
     /// Get display name (prefer first_name or username)
     pub fn display_name(&self) -> &str {
-        self.first_name
-            .as_deref()
-            .unwrap_or(self.username.as_str())
+        self.first_name.as_deref().unwrap_or(self.username.as_str())
     }
 
     /// Get primary identifier (email, phone, or username)
@@ -76,7 +74,7 @@ impl From<User> for UserPublic {
 pub struct SignUpRequest {
     pub email: Option<String>,
     pub phone: Option<String>,
-    pub username: String,
+    pub username: Option<String>,
     pub password: String,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
@@ -84,36 +82,12 @@ pub struct SignUpRequest {
 
 /// Sign up response
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SignUpResponse {
-    pub user: UserPublic,
-    pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub verification_required: Option<bool>,
+pub struct SignUpResponseData {
+    pub user_id: String,
+    pub email: Option<String>,
 }
 
-impl SignUpResponse {
-    pub fn success(user: UserPublic) -> ApiResponse<Self> {
-        ApiResponse::success_data(
-            "Account created successfully. Please verify your email.",
-            Self {
-                user,
-                message: "Account created successfully".to_string(),
-                verification_required: Some(true),
-            },
-        )
-    }
 
-    pub fn no_verification(user: UserPublic) -> ApiResponse<Self> {
-        ApiResponse::success_data(
-            "Account created successfully",
-            Self {
-                user,
-                message: "Account created successfully".to_string(),
-                verification_required: Some(false),
-            },
-        )
-    }
-}
 
 // ============================================
 // Sign In Types
@@ -122,7 +96,7 @@ impl SignUpResponse {
 /// Sign in request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignInRequest {
-    pub identifier: String,  // email, phone, or username
+    pub identifier: String, // email, phone, or username
     pub password: String,
 }
 
@@ -149,7 +123,11 @@ impl SignInResponse {
         )
     }
 
-    pub fn with_refresh(user: UserPublic, access_token: String, refresh_token: String) -> ApiResponse<Self> {
+    pub fn with_refresh(
+        user: UserPublic,
+        access_token: String,
+        refresh_token: String,
+    ) -> ApiResponse<Self> {
         ApiResponse::success_data(
             "Signed in successfully",
             Self {
@@ -169,7 +147,7 @@ impl SignInResponse {
 /// Request password reset
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PasswordResetRequest {
-    pub identifier: String,  // email or phone
+    pub identifier: String, // email or phone
 }
 
 /// Confirm password reset
@@ -195,7 +173,7 @@ pub struct ChangePasswordRequest {
 /// Send verification code request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SendVerificationRequest {
-    pub medium: VerificationMedium,  // email or phone
+    pub medium: VerificationMedium, // email or phone
 }
 
 /// Verify code request
