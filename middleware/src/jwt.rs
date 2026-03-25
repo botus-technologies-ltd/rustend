@@ -181,3 +181,22 @@ impl JwtClaims for actix_web::HttpRequest {
         self.extensions().get::<TokenInfo>().cloned()
     }
 }
+
+// Implement FromRequest for Claims to allow direct extraction in routes
+impl actix_web::FromRequest for Claims {
+    type Error = actix_web::Error;
+    type Future = futures_util::future::Ready<Result<Self, Self::Error>>;
+
+    fn from_request(
+        req: &actix_web::HttpRequest,
+        _payload: &mut actix_web::dev::Payload,
+    ) -> Self::Future {
+        if let Some(claims) = req.extensions().get::<Claims>() {
+            futures_util::future::ready(Ok(claims.clone()))
+        } else {
+            futures_util::future::ready(Err(actix_web::error::ErrorUnauthorized(
+                "Missing or invalid JWT token",
+            )))
+        }
+    }
+}

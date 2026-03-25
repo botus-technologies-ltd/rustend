@@ -7,7 +7,8 @@ use std::sync::Arc;
 use crate::gateway::PaymentGateway;
 use crate::providers::{
     AirtelConfig, AirtelGateway, MpesaConfig, MpesaGateway, PayPalConfig, PayPalGateway,
-    TCashConfig, TCashGateway, VisaConfig, VisaGateway,
+    PaystackConfig, PaystackGateway, StripeConfig, StripeGateway, TCashConfig, TCashGateway,
+    VisaConfig, VisaGateway,
 };
 use crate::types::PaymentProvider;
 
@@ -19,6 +20,8 @@ pub enum ProviderConfig {
     Mpesa(MpesaConfig),
     AirtelMoney(AirtelConfig),
     TCash(TCashConfig),
+    Paystack(PaystackConfig),
+    Stripe(StripeConfig),
 }
 
 impl ProviderConfig {
@@ -66,6 +69,22 @@ impl ProviderConfig {
         Self::TCash(TCashConfig::new(client_id, client_secret, merchant_id))
     }
 
+    pub fn paystack(
+        secret_key: impl Into<String>,
+        public_key: impl Into<String>,
+        webhook_secret: impl Into<String>,
+    ) -> Self {
+        Self::Paystack(PaystackConfig::new(secret_key, public_key, webhook_secret))
+    }
+
+    pub fn stripe(
+        secret_key: impl Into<String>,
+        publishable_key: impl Into<String>,
+        webhook_secret: impl Into<String>,
+    ) -> Self {
+        Self::Stripe(StripeConfig::new(secret_key, publishable_key, webhook_secret))
+    }
+
     pub fn build_gateway(self) -> Arc<dyn PaymentGateway> {
         match self {
             Self::Visa(config) => {
@@ -86,6 +105,14 @@ impl ProviderConfig {
             }
             Self::TCash(config) => {
                 let gateway = TCashGateway::new(config);
+                Arc::new(gateway) as Arc<dyn PaymentGateway>
+            }
+            Self::Paystack(config) => {
+                let gateway = PaystackGateway::new(config);
+                Arc::new(gateway) as Arc<dyn PaymentGateway>
+            }
+            Self::Stripe(config) => {
+                let gateway = StripeGateway::new(config);
                 Arc::new(gateway) as Arc<dyn PaymentGateway>
             }
         }
@@ -121,6 +148,8 @@ impl PaymentConfig {
             ProviderConfig::Mpesa(_) => PaymentProvider::Mpesa,
             ProviderConfig::AirtelMoney(_) => PaymentProvider::AirtelMoney,
             ProviderConfig::TCash(_) => PaymentProvider::TCash,
+            ProviderConfig::Paystack(_) => PaymentProvider::Paystack,
+            ProviderConfig::Stripe(_) => PaymentProvider::Visa, // Stripe uses Visa provider type
         };
         self.providers.push((provider, config));
         self
@@ -183,6 +212,20 @@ impl PaymentConfig {
             std::env::var("M_PESA_SECURITY_CREDENTIAL"),
         ) {
             config = config.add_provider(ProviderConfig::mpesa(key, secret, code, initiator, cred));
+        }
+        if let (Ok(secret_key), Ok(public_key), Ok(webhook_secret)) = (
+            std::env::var("PAYSTACK_SECRET_KEY"),
+            std::env::var("PAYSTACK_PUBLIC_KEY"),
+            std::env::var("PAYSTACK_WEBHOOK_SECRET"),
+        ) {
+            config = config.add_provider(ProviderConfig::paystack(secret_key, public_key, webhook_secret));
+        }
+        if let (Ok(secret_key), Ok(publishable_key), Ok(webhook_secret)) = (
+            std::env::var("STRIPE_SECRET_KEY"),
+            std::env::var("STRIPE_PUBLISHABLE_KEY"),
+            std::env::var("STRIPE_WEBHOOK_SECRET"),
+        ) {
+            config = config.add_provider(ProviderConfig::stripe(secret_key, publishable_key, webhook_secret));
         }
         config
     }

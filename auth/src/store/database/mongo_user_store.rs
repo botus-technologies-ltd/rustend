@@ -30,24 +30,24 @@ impl UserStore for MongoUserStore {
     fn create(&self, input: CreateUserInput) -> AuthResult<User> {
         // Generate ID
         let id = generate_id();
-        let now = chrono::Utc::now().timestamp();
+        let now = chrono::Utc::now();
 
         // Create user document
         let user = User {
-            id: id.clone(),
-            email: input.email.clone(),
-            password_hash: input.password,
-            phone: input.phone.clone(),
-            username: input.username.clone(),
-            first_name: input.first_name.clone(),
-            last_name: input.last_name.clone(),
-            is_active: true,
-            is_verified: false,
-            failed_login_attempts: 0,
-            locked_until: None,
-            created_at: now,
-            updated_at: None,
-            last_login_at: None,
+            id:             id.clone(),
+            email:          input.email.clone(),
+            password_hash:  input.password,
+            phone:          input.phone.clone(),
+            username:       None,
+            first_name:     None,
+            last_name:      None,
+            is_active:      true,
+            is_verified:    false,
+            login_attempts: 0,
+            locked_until:   None,
+            created_at:     now,
+            updated_at:     None,
+            last_login:     None,
         };
 
         // Insert into database
@@ -138,12 +138,7 @@ impl UserStore for MongoUserStore {
         if let Some(ref last_name) = input.last_name {
             set.insert("last_name", last_name);
         }
-        if let Some(is_active) = input.is_active {
-            set.insert("is_active", is_active);
-        }
-        if let Some(is_verified) = input.is_verified {
-            set.insert("is_verified", is_verified);
-        }
+
 
         // Add updated_at timestamp
         set.insert("updated_at", chrono::Utc::now().timestamp());

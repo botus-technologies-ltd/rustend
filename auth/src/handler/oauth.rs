@@ -10,7 +10,8 @@ use utils::response::{ApiResponse, ApiError };
 
 use crate::config::oauth::{OAuthConfig};
 use crate::service::OAuthService;
-use crate::handler::login_user::{generate_access_token, generate_refresh_token};
+use crate::handler::login_user::{
+    generate_access_token, generate_refresh_token};
 
 use crate::models::oauth::{
     CreateOAuthAccount, 
@@ -38,7 +39,7 @@ pub struct OAuthConnectionResponse {
 
 /// Helper function to load and configure OAuth for a specific provider
 fn load_oauth_config_for_provider(
-    provider: &OAuthProvider,
+    provider:     &OAuthProvider,
     provider_str: &str,
 ) -> Result<OAuthConfig, AuthError> {
     let config = OAuthConfig::load_provider_config(&provider_str.to_uppercase())
@@ -59,7 +60,7 @@ fn load_oauth_config_for_provider(
 
 /// OAuth redirect - initiates OAuth flow
 pub async fn oauth_redirect(
-    _state: web::Data<AppState>,
+    _state:   web::Data<AppState>,
     provider: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     let provider_str = provider.into_inner();
@@ -119,10 +120,10 @@ pub async fn oauth_redirect(
 
 /// OAuth callback - handles OAuth provider callback
 pub async fn oauth_callback(
-    state: web::Data<AppState>,
+    state:    web::Data<AppState>,
     provider: web::Path<String>,
-    query: web::Query<std::collections::HashMap<String, String>>,
-    req: HttpRequest,
+    query:    web::Query<std::collections::HashMap<String, String>>,
+    req:      HttpRequest,
 ) -> Result<HttpResponse, Error> {
     
     let provider_str = provider.into_inner();
@@ -209,17 +210,17 @@ pub async fn oauth_callback(
             let refresh_token_hash = hash_sha256(&refresh_token);
 
             let session_input = CreateSession {
-                user_id: oauth_account.user_id.clone(),
+                user_id:            oauth_account.user_id.clone(),
                 access_token_hash,
                 refresh_token_hash: Some(refresh_token_hash.clone()),
-                device: device.clone(),
-                ip_address: ip_address.clone(),
-                user_agent: user_agent.clone(),
-                expires_in: state.jwt_expiry_minutes * 24 * 60 * 60,
+                device:             device.clone(),
+                ip_address:         ip_address.clone(),
+                user_agent:         user_agent.clone(),
+                expires_in:         state.jwt_expiry_minutes * 24 * 60 * 60,
             };
 
             let refresh_input = CreateRefreshToken {
-                user_id: oauth_account.user_id.clone(),
+                user_id:    oauth_account.user_id.clone(),
                 token_hash: refresh_token_hash.clone(),
                 expires_in: state.refresh_token_expiry_days * 24 * 60 * 60,
             };
@@ -237,9 +238,9 @@ pub async fn oauth_callback(
             let response = ApiResponse::success_data(
                 "OAuth login successful",
                 serde_json::json!({
-                    "access_token": access_token,
+                    "access_token":  access_token,
                     "refresh_token": refresh_token,
-                    "user_id": oauth_account.user_id,
+                    "user_id":       oauth_account.user_id,
                 }),
             );
 
@@ -266,9 +267,6 @@ pub async fn oauth_callback(
                     email: Some(user_email.clone()),
                     password: generate_id().to_string(), // Random password for OAuth users
                     phone: None,
-                    username: None,
-                    first_name: user_info.name.clone(),
-                    last_name: None,
                 };
 
                 state

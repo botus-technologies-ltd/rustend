@@ -4,5 +4,7 @@
 //! for authentication flows, OAuth integration, and account management.
 
 pub mod oauth;
+pub mod user;
 
 pub use oauth::OAuthService;
+pub use user::UserService;

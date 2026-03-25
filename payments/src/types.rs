@@ -20,6 +20,8 @@ pub enum PaymentProvider {
     AirtelMoney,
     /// TCash (Indonesia)
     TCash,
+    /// Paystack (Nigeria/Africa)
+    Paystack,
 }
 
 impl Default for PaymentProvider {
@@ -36,6 +38,7 @@ impl std::fmt::Display for PaymentProvider {
             PaymentProvider::Mpesa => write!(f, "mpesa"),
             PaymentProvider::AirtelMoney => write!(f, "airtel_money"),
             PaymentProvider::TCash => write!(f, "tcash"),
+            PaymentProvider::Paystack => write!(f, "paystack"),
         }
     }
 }
