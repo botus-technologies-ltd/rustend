@@ -14,7 +14,6 @@ use utils::email::EmailService;
 // Internal imports for store initialization
 use crate::store::database::MongoPasswordResetStore;
 use crate::store::database::MongoSessionStore;
-use crate::store::database::MongoUserStore;
 use crate::store::database::MongoVerificationStore;
 use crate::store::database::MongoOAuthAccountStore;
 
@@ -94,8 +93,13 @@ impl AppState {
 /// 
 /// This function creates all auth-specific stores internally and returns
 /// the auth AppState, encapsulating all auth dependencies.
+/// Initialize auth module with database and configuration
+/// 
+/// This function creates all auth-specific stores internally and returns
+/// the auth AppState, encapsulating all auth dependencies.
 pub fn init(
     mongo_db: &mongodb::sync::Database,
+    users: Arc<dyn UserStore>,
     jwt_secret: String,
     jwt_expiry_minutes: i64,
     refresh_token_expiry_days: i64,
@@ -104,9 +108,7 @@ pub fn init(
     app_name: String,
     frontend_url: String,
 ) -> AppState {
-    // Create auth store instances
-    let users = Arc::new(MongoUserStore::new(mongo_db.collection("users"))) as Arc<dyn UserStore>;
-
+    // Create auth store instances (except users which is passed in)
     let sessions = Arc::new(MongoSessionStore::new(
         mongo_db.collection("sessions"),
         mongo_db.collection("refresh_tokens"),
@@ -176,6 +178,7 @@ pub fn configure(cfg: &mut web::ServiceConfig, jwt_secret: String) {
             )
             
             // Protected routes (auth required) - different path prefix
+            // pt = protected - requires JWT auth
             .service(
                 web::scope("/pt")
                     .wrap(JwtMiddleware::from_secret(secret))
